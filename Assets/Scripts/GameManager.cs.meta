@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d26325cd2783f9144b6f6df80f98f6b8
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - tileAsset: {instanceID: 0}
+  - tileAsset2: {instanceID: 0}
+  - playerPrefab: {instanceID: 0}
+  - enemyPrefab: {instanceID: 0}
+  - camera: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
