@@ -183,7 +183,7 @@ public class GameState {
     }
 
     private void ManageMove(Move mv) {
-        CharacterState newCS = mv.executeAction();
+        CharacterState newCS = mv.executeAction(); // bug se mueve dos veces el mismo esqueleto
         entitiesPosition.Remove(mv.executor.position);
         entitiesPosition.Add(newCS.position, newCS);
 

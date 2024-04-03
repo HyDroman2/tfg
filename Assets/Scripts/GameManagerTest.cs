@@ -8,7 +8,10 @@ namespace Assets.Scripts
     {
         public GameState[] states;
         private int maxTestNumLevels = 10;
-        private BRAIN_TYPES[] test = new BRAIN_TYPES[] { BRAIN_TYPES.DECISION_TREE_BRAIN };
+        private BRAIN_TYPES[] test = new BRAIN_TYPES[] { 
+            BRAIN_TYPES.ALPHABETA_BRAIN,
+            BRAIN_TYPES.EAGER_BRAIN
+        };
         private int actualBrainIndex = 0;
         private int[] scores;
         protected override void Start()

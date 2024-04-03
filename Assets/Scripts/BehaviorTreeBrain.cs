@@ -135,25 +135,21 @@ public class LoseTimeTask : GameStatTask
     public LoseTimeTask(BehaviorTreeBrain bt) : base(bt) { }
 
     public override bool run()
-    {
-        GameState gs = GameManager.instance.ActualGameState; // Incorrecto
+    { 
         float maxDistance = float.NegativeInfinity;
         CharacterState actualExecutor = gs.getActualExecutor();
         Action act; // Poner bien
         act = new Move(actualExecutor, MovableEntity.Movements.STAY);
 
-        
-        if (actualExecutor.position.distance(gs.player.position) <= 20)
-            foreach (Action move in gs.legalMoves().Where(m => m is Move)) // Actual executor
+        foreach (Action move in gs.legalMoves().Where(m => m is Move)) // Actual executor
+        {
+            float distance = (actualExecutor.position + ((Move)move).direction.Vect).distance(gs.player.position);
+            if (distance > maxDistance)
             {
-                float distance = (actualExecutor.position + ((Move)move).direction.Vect).distance(gs.player.position);
-                if (distance > maxDistance)
-                {
-                    maxDistance = distance;
-                    act = move;
-                }
+                maxDistance = distance;
+                act = move;
             }
-
+        }
         bt.lastActionAdded = act;
         return true;
     }
@@ -199,7 +195,7 @@ public class GoToWiderPosition : GameStatTask
         Room habitacion = ShuffleList<Room>.pickRandomElement(gs.map.rooms);
         Vector2Int baldosa = ShuffleList<Vector2Int>.pickRandomElement(habitacion.getTiles());
         List<Vector2Int> positions = SearchMethods.astar(gs.getActualExecutor().position, baldosa, gs); // No pasa la accion.
-        if (positions.Count > 1) {
+        if (positions != null && positions.Count > 1) {
             Vector2Int moveVect = positions[1] - gs.getActualExecutor().position;
             bt.lastActionAdded = new Move(gs.getActualExecutor(), MovableEntity.Movements.vectToMovement[moveVect]);
             return true; // GoToWiderPosition
@@ -266,6 +262,8 @@ public class BehaviorTreeBrain : EnemiesBrain{
             else
                 accionesGeneradas.Add(lastActionAdded);
 
+            gs.applyAction(lastActionAdded);
+            lastActionAdded = null;
             // Hay que updatear el gamestate
         }
     

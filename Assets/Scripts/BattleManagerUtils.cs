@@ -115,7 +115,6 @@ public class BattleManagerUtils : MonoBehaviour
                 if (extractedPos == endPos)
                     return bfsPath(explored, extractedPos);
 
-
                 foreach (MovableEntity.Movements item in MovableEntity.Movements.opList)
                 {
                     Vector2Int newPos = extractedPos + Vector2Int.FloorToInt(item.Vect);
@@ -278,7 +277,7 @@ public class BattleManagerUtils : MonoBehaviour
         }
 
         public List<Action> getComplexPathAStar(Vector2Int startPos, Vector2Int endPos) {
-            List<Vector2Int> camino = SearchMethods.astar(startPos, endPos, gs);
+            List<Vector2Int> camino = SearchMethods.astarPlayer(startPos, endPos, gs); // Astar player
             List<Action> actionPath = new List<Action>(camino.Count);
             for (int i = 0; i < camino.Count - 1; i++)
                 actionPath.Add(new Move(gs.player, MovableEntity.Movements.vectToMovement[camino[i + 1] - camino[i]]));

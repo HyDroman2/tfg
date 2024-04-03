@@ -14,6 +14,7 @@ public class BattleManager : MonoBehaviour
     private static BattleManager battleManager;
     public bool dashTurn;
     private int countDash;
+   
     public BRAIN_TYPES enemiesBrain { get; set; }
 
 
@@ -91,7 +92,7 @@ public class BattleManager : MonoBehaviour
 
         if (canEnemiesAct) {
             canEnemiesAct = false;
-            Brain brain = createBrain(BRAIN_TYPES.BEHAVIOR_TREE_BRAIN, GameManager.instance.ActualGameState);
+            Brain brain = createBrain(enemiesBrain, GameManager.instance.ActualGameState);
             Action[] acciones = brain.makeDecision().ToArray();
             GameManager.instance.executeActions(acciones);
             Debug.Log("Enemy acts");
