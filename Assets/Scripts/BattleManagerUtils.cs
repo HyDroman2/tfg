@@ -1,11 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using VectorMethods;
 
 public enum BRAIN_TYPES { 
-    EAGER_BRAIN, ALPHABETA_BRAIN, DECISION_TREE_BRAIN, BEHAVIOR_TREE_BRAIN
+    EAGER_BRAIN, EAGER_ASTAR_BRAIN, ALPHABETA_BRAIN, DECISION_TREE_BRAIN, BEHAVIOR_TREE_BRAIN
 }
 
 
@@ -19,8 +20,7 @@ public class BattleManagerUtils : MonoBehaviour
         {
 
             explored.Add(pos);
-            if (gs.entitiesPosition.ContainsKey(pos) && gs.entitiesPosition[pos].id != -1)
-            {
+            if (gs.entitiesPosition.ContainsKey(pos) && !gs.entitiesPosition[pos].isPlayer) {
                 return new List<Vector2Int>();
             }
 
@@ -50,10 +50,6 @@ public class BattleManagerUtils : MonoBehaviour
             {
                 path.Add(aux);
                 aux = paths[aux];
-                if (path.Count > 1000) { 
-                    Debug.Log("Me espia");
-                    break;
-                }
             }
             path.Reverse();
             return path;
@@ -76,7 +72,7 @@ public class BattleManagerUtils : MonoBehaviour
                     break; // Ha superado la profundidad introducida
                 bool entityInPos = gs.entitiesPosition.ContainsKey(extractedPos);
 
-                if (entityInPos && gs.entitiesPosition[extractedPos].id != -1)
+                if (entityInPos && !gs.entitiesPosition[extractedPos].isPlayer)
                 {
                     return bfsPath(explored, extractedPos);
                 }
@@ -97,15 +93,15 @@ public class BattleManagerUtils : MonoBehaviour
         }
 
 
-        public static List<Vector2Int> astar(Vector2Int pos, Vector2Int endPos, GameState gs)
+        public static List<Vector2Int> astar(Vector2Int initialPos, Vector2Int endPos, GameState gs)
         {
             Vector2Int extractedPos;
             Queue<(Vector2Int, float)> positions = new Queue<(Vector2Int, float)>();
 
             Dictionary<Vector2Int, Vector2Int> explored = new Dictionary<Vector2Int, Vector2Int>();
 
-            explored.Add(pos, ROOT);
-            positions.Enqueue((pos, 0));
+            explored.Add(initialPos, ROOT);
+            positions.Enqueue((initialPos, 0));
             int[,] rawTiles = gs.rawTiles;
 
             while (positions.Count != 0)
@@ -118,10 +114,10 @@ public class BattleManagerUtils : MonoBehaviour
                 foreach (MovableEntity.Movements item in MovableEntity.Movements.opList)
                 {
                     Vector2Int newPos = extractedPos + Vector2Int.FloorToInt(item.Vect);
-                    if (!gs.isTileInsideMap(newPos) || explored.ContainsKey(newPos) || gs.entitiesPosition.ContainsKey(newPos))
+                    if (!gs.isTileInsideMap(newPos) || explored.ContainsKey(newPos))
                         continue;
 
-                    positions.Enqueue((newPos, endPos.distance(newPos)));
+                    positions.Enqueue((newPos, endPos.distance(newPos) + initialPos.manhattanDistance(newPos)));
                     explored.Add(newPos, extractedPos);
 
                 }
@@ -129,19 +125,19 @@ public class BattleManagerUtils : MonoBehaviour
                 positions = new Queue<(Vector2Int, float)>(positions.OrderBy(tup => tup.Item2)); // Puedo crear clase priority queue que cada vez que añado lo ordena.
 
             }
-            return null;
+            return new List<Vector2Int>();
 
         }
 
-        public static List<Vector2Int> astarPlayer(Vector2Int pos, Vector2Int endPos, GameState gs)
+        public static List<Vector2Int> astarPlayer(Vector2Int initialPos, Vector2Int endPos, GameState gs)
         {
             Vector2Int extractedPos;
             Queue<(Vector2Int, float)> positions = new Queue<(Vector2Int, float)>();
 
             Dictionary<Vector2Int, Vector2Int> explored = new Dictionary<Vector2Int, Vector2Int>();
 
-            explored.Add(pos, ROOT);
-            positions.Enqueue((pos, 0));
+            explored.Add(initialPos, ROOT);
+            positions.Enqueue((initialPos, 0));
             int[,] rawTiles = gs.rawTiles;
 
             while (positions.Count != 0)
@@ -152,7 +148,7 @@ public class BattleManagerUtils : MonoBehaviour
                     return bfsPath(explored, extractedPos);
 
                 bool entityInPos = gs.entitiesPosition.ContainsKey(extractedPos);
-                if (entityInPos && gs.entitiesPosition[extractedPos].id != -1)
+                if (entityInPos && !gs.entitiesPosition[extractedPos].isPlayer)
                     return bfsPath(explored, extractedPos);
 
                 foreach (MovableEntity.Movements item in MovableEntity.Movements.opList)
@@ -161,12 +157,12 @@ public class BattleManagerUtils : MonoBehaviour
                     if (!gs.isTileInsideMap(newPos) || explored.ContainsKey(newPos))
                         continue;
 
-                    positions.Enqueue((newPos, endPos.distance(newPos)));
+                    positions.Enqueue((newPos, endPos.distance(newPos) + initialPos.manhattanDistance(newPos)));
                     explored.Add(newPos, extractedPos);
 
                 }
 
-                positions = new Queue<(Vector2Int, float)>(positions.OrderBy(tup => tup.Item2)); // Puedo crear clase priority queue que cada vez que añado lo ordena.
+                positions = new Queue<(Vector2Int, float)>(positions.OrderBy(tup => tup.Item2)); 
 
             }
             return null;
@@ -184,6 +180,55 @@ public class BattleManagerUtils : MonoBehaviour
         }
         public abstract List<Action> makeDecision(); // TODO cambiar nombre
 
+
+        public CharacterState getNearestEnemyTo(CharacterState source, float minDistance = float.PositiveInfinity)
+        { 
+
+            CharacterState nearestEnemy = null;
+
+            foreach (CharacterState enemy in gs.enemiesAlive)
+            {
+                float distance = source.pos.distance(enemy.pos);
+                if (distance < minDistance && enemy.id != source.id)
+                {
+                    minDistance = distance;
+                    nearestEnemy = enemy;
+                }
+            }
+            return nearestEnemy;
+        }
+
+        public Action getNearestMoveTo(CharacterState entitySource, CharacterState entitydst)
+        {
+            return getNearestMoveToPos(entitySource, entitydst.pos); 
+        }
+
+        public Action getNearestMoveToPos(CharacterState entitySource, Vector2Int pos)
+        {
+            float minDistance = float.PositiveInfinity;
+            Action moveTo = new Move(gs.ActualExecutor, MovableEntity.Movements.STAY);
+            foreach (Action move in gs.legalMoves().Where(m => m is Move))
+            {
+                float distance = (entitySource.pos + ((Move)move).direction.Vect).distance(pos);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    moveTo = move;
+                }
+
+            }
+
+            return moveTo;
+        }
+
+        public bool IsEntityInCorridor(CharacterState cs) {
+            return gs.map.corridorTiles.Contains(cs.pos);
+        }
+
+        public bool canAttackOneEntityToOther(CharacterState agressor, CharacterState victim) {
+            return agressor.attackRange >= agressor.pos.distance(victim.pos);
+        }
+
     }
 
 
@@ -191,23 +236,12 @@ public class BattleManagerUtils : MonoBehaviour
     {
 
         public PlayerBrain(GameState gs) : base(gs) { }
-        private const int TILEDISTANCEVIEW = 1;
-        private List<Action> memory = null;
-        private int lastActionIndex = 0;
+        private const int TILEDISTANCEVIEW = 5;
+        private Queue<MovableEntity.Movements> memory = null;
 
-        public CharacterState getNearestEnemy(float minDistance = float.PositiveInfinity)
+        public CharacterState getPlayerNearestEnemy()
         { 
-            CharacterState nearestEnemy = null;
-            foreach (CharacterState enemy in gs.enemiesAlive)
-            {
-                float distance = gs.player.position.distance(enemy.position);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                    nearestEnemy = enemy;
-                }
-            }
-            return nearestEnemy;
+            return getNearestEnemyTo(gs.player);
         }
 
 
@@ -219,13 +253,10 @@ public class BattleManagerUtils : MonoBehaviour
             if(act != null)
                 memory = null;
             else {
-                if (memory == null || lastActionIndex >= memory.Count)
-                {
-                    lastActionIndex = 0;
-                    memory = getComplexPathAStar(gs.player.position, getNearestEnemy().position); 
-                    act = memory[lastActionIndex];
-                }
-                lastActionIndex++;
+                if (memory == null || memory.Count != 0)
+                    memory = getComplexPathAStar(gs.player.pos, getPlayerNearestEnemy().pos); 
+               
+                act = (memory.Count != 0) ? new Move(gs.player, memory.Dequeue()): new Move(gs.player, MovableEntity.Movements.STAY);
             }
        
             actions.Add(act);
@@ -234,7 +265,7 @@ public class BattleManagerUtils : MonoBehaviour
 
         private Action checkNearToThink()
         {
-            List<Vector2Int> res = SearchMethods.bfs(Vector2Int.FloorToInt(gs.player.position), TILEDISTANCEVIEW,gs ); 
+            List<Vector2Int> res = SearchMethods.bfs(Vector2Int.FloorToInt(gs.player.pos), TILEDISTANCEVIEW, gs); 
             Action act = null;
             if (res != null)
             {
@@ -251,6 +282,7 @@ public class BattleManagerUtils : MonoBehaviour
             return act;
         }
 
+        /**
         public Action getEagerAction()
         {
             Action[] legalMoves = gs.legalMoves(gs.player);
@@ -264,7 +296,7 @@ public class BattleManagerUtils : MonoBehaviour
             foreach (Action action in legalMoves) {
                 CharacterState newPlayerState = action.executeAction();
                 foreach (CharacterState enemy in gs.enemiesAlive) {
-                        auxDistance = (newPlayerState.position - enemy.position).sqrMagnitude;
+                        auxDistance = (newPlayerState.pos - enemy.pos).sqrMagnitude;
                         if (auxDistance < minDistance)
                         {
                             bestAction = action;
@@ -276,11 +308,14 @@ public class BattleManagerUtils : MonoBehaviour
             return bestAction;
         }
 
-        public List<Action> getComplexPathAStar(Vector2Int startPos, Vector2Int endPos) {
+        */
+
+        public Queue<MovableEntity.Movements> getComplexPathAStar(Vector2Int startPos, Vector2Int endPos) {
             List<Vector2Int> camino = SearchMethods.astarPlayer(startPos, endPos, gs); // Astar player
-            List<Action> actionPath = new List<Action>(camino.Count);
-            for (int i = 0; i < camino.Count - 1; i++)
-                actionPath.Add(new Move(gs.player, MovableEntity.Movements.vectToMovement[camino[i + 1] - camino[i]]));
+            Queue<MovableEntity.Movements> actionPath = new Queue<MovableEntity.Movements>(camino.Count);
+            for (int i = 0; i < camino.Count - 1; i++) 
+                actionPath.Enqueue(MovableEntity.Movements.vectToMovement[camino[i + 1] - camino[i]]);
+
             return actionPath;
 
         }
@@ -290,58 +325,103 @@ public class BattleManagerUtils : MonoBehaviour
 
     public class EagerEnemiesBrain: EnemiesBrain {
 
-        public EagerEnemiesBrain(GameState gs) : base(gs) { }
 
-        public Action[] eagerDecision()
-        {
+        public EagerEnemiesBrain(GameState gs) : base(gs.clone()) { }
+
+        public virtual Action[] eagerDecision()
+        { 
+
             List<Action> eagerActions = new List<Action>(gs.enemies.Count);
-            GameState updatedGS = gs.clone();
 
-            foreach (CharacterState enemy in gs.enemiesAlive)
+            foreach (CharacterState enemy in gs.enemiesAlive.ToArray())
             {
-                Action bestAction = eagerDecisionSingleEnemy(updatedGS, enemy);
-                if (bestAction != null)
-                {
-                    updatedGS.applyAction(bestAction);
-                    eagerActions.Add(bestAction);
-                }
-
+                Action bestAction = eagerDecisionSingleEnemy(enemy);
+                gs.applyAction(bestAction);
+                eagerActions.Add(bestAction);
             }
 
             return eagerActions.ToArray();
         }
-
-        public Action eagerDecisionSingleEnemy(GameState GS, CharacterState enemy)
+        
+        public virtual Action eagerDecisionSingleEnemy(CharacterState enemy)
         {
-            float minDistance = float.MaxValue;
-            float auxDistance;
-            Action[] legalMoves = GS.legalMoves(enemy); // Tiene que ser un legal move como llega a eso.
-            Action bestAction = Array.Find(legalMoves, act => act is Attack);
+            Action bestAction = Array.Find(gs.legalMoves(enemy), act => act is Attack);
 
             if (bestAction != null)
                 return bestAction;
 
-            foreach (Action move in legalMoves)
-            {
-                CharacterState newCharacterState = move.executeAction();
-                auxDistance = (GS.player.position - newCharacterState.position).sqrMagnitude;
-                if (auxDistance < minDistance)
-                {
-                    bestAction = move;
-                    minDistance = auxDistance;
-                }
-                
-            }
-
-            return bestAction;
+            return getNearestMoveTo(enemy, gs.player); 
 
         }
+
 
         public override List<Action> makeDecision()
         {
             return new List<Action>(eagerDecision());
         }
     }
+
+
+
+    public class EagerastarEnemiesBrain : EagerEnemiesBrain
+    {
+        private Dictionary<CharacterState, Queue<MovableEntity.Movements>> memory = new Dictionary<CharacterState, Queue<MovableEntity.Movements>>();
+        public EagerastarEnemiesBrain(GameState gs) : base(gs) { }
+
+
+        public override Action eagerDecisionSingleEnemy(CharacterState enemy) 
+        {
+            if (memory.ContainsKey(enemy) && memory.Count <= 10) {
+                return base.eagerDecisionSingleEnemy(enemy);
+            }
+            manageEnemyMemory(enemy);
+
+            if (memory[enemy].Count != 0) {
+                Action move = new Move(enemy, memory[enemy].Peek());
+                if (gs.entitiesPosition.ContainsKey(move.executeAction().pos))
+                    return new Move(enemy, MovableEntity.Movements.STAY);
+                else {
+                    memory[enemy].Dequeue();
+                    return move;
+                }
+                   
+            }
+
+            return base.eagerDecisionSingleEnemy(enemy);
+     
+        }
+
+   
+        private void manageEnemyMemory(CharacterState enemy)
+        {
+
+            if (memory.ContainsKey(enemy))
+            {
+                if (memory.Count == 0)
+                    memory[enemy] = getComplexPathAStar(enemy.pos, gs.player.pos);
+            }
+            else
+                memory.Add(enemy, getComplexPathAStar(enemy.pos, gs.player.pos));
+
+        }
+
+
+
+        public Queue<MovableEntity.Movements> getComplexPathAStar(Vector2Int startPos, Vector2Int endPos)
+        {
+            List<Vector2Int> camino = SearchMethods.astar(startPos, endPos, gs); // Astar player
+            Queue<MovableEntity.Movements> actionPath = new Queue<MovableEntity.Movements>(camino.Count);
+            for (int i = 0; i < camino.Count - 1; i++)
+                actionPath.Enqueue(MovableEntity.Movements.vectToMovement[camino[i + 1] - camino[i]]);
+
+            return actionPath;
+
+        }
+    }
+
+  
+
+
 
 
     public abstract class EnemiesBrain : Brain {
@@ -367,7 +447,7 @@ public class BattleManagerUtils : MonoBehaviour
             for (int actIndex = optimalMovements.Count - 1; actIndex >= 0; actIndex--)
             { // Aqui esta el error porque sale dos veces el id 1 en lugar del -1 mirar.
                 Action act = optimalMovements[actIndex];
-                if (act.executor.id == -1)
+                if (act.executor.isPlayer)
                     break;
                 nextMovements.Add(act);
             }
@@ -486,7 +566,7 @@ public class BattleManagerUtils : MonoBehaviour
                 if (enemy is null)
                     enemyKillScore += 1;
                 else
-                    sumSqrDist += (gs.player.position - enemy.position).sqrMagnitude;
+                    sumSqrDist += (gs.player.pos - enemy.pos).sqrMagnitude;
             }
 
             return gs.player.hp * 1000 - sumSqrDist * 0.1f + enemyKillScore;

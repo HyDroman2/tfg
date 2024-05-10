@@ -1,23 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-public class EnemyController : MovableEntity
+public abstract class EnemyController : MovableEntity
 {
-
-
-
-    public virtual bool executeAction(Action action)
+    protected virtual void Awake()
     {
-        if (action == null)
-            return false;
-        if (action is Move)
-            moveTask(((Move)action).direction);
-        else
-            attack(((Attack)action).victim.position);
-        return true;
+        animationNamesInit("enemyAttack");
+    }
 
-    }
-    private void OnDestroy()
-    {
-        GameManager.instance.increaseDeadEnemyCount();
-    }
+
 }   

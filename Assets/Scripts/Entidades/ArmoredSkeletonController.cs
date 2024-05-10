@@ -10,9 +10,15 @@ public class ArmoredSkeletonController : EnemyController
     public static CharacterState Data = data.clone();
 
     // Start is called before the first frame update
-    void Awake()
+    protected override void Awake()
     {
-        animationNamesInit("enemyAttack");
+        base.Awake();
         name = ENEMYBASENAME;
+    }
+
+    public static string getInfoBaseStats()
+    {
+        return string.Format("{0}: HP:{1} ATK: {2}, DEF: {3} Range: {4}",
+            ENEMYBASENAME, BASE_HP, BASE_ATTACK, BASE_DEFENSE, BASE_RANGE);
     }
 }

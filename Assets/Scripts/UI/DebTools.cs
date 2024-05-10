@@ -4,11 +4,12 @@ using UnityEngine;
 using Image = UnityEngine.UI.Image;
 using UnityEngine.EventSystems;
 using System;
+using TMPro;
 
 public class DebTools: MonoBehaviour
 {
     public static GUIActions lastbuttonpressed = GUIActions.NONE;
-    public static bool isDebToolsEnabled = true;
+    public static bool isDebToolsEnabled = false;
     private bool overGUI = false;
     private List<Sprite> spriteOrder;
     private GameManager gm;
@@ -25,8 +26,9 @@ public class DebTools: MonoBehaviour
     private Image MoveContainer;
     private Image DeleteEnemyContainer;
     private Image currentBlinkingContainer;
+    private static TMP_Text currentAlgorithmDisplayed;
 
-   
+
     private Color greenColor = new Color32(104, 255, 146, 139);
     private Color whiteColor = new Color32(255, 255, 255, 139);
     private Color greenColorPlay = new Color32(104, 255, 146, 255);
@@ -50,7 +52,7 @@ public class DebTools: MonoBehaviour
         MoveContainer = GameObject.Find("MoveContainer").GetComponent<Image>();
         DeleteEnemyContainer = GameObject.Find("DeleteEnemyContainer").GetComponent<Image>();
         PlayContainer = GameObject.Find("BtnPlay").GetComponent<Image>();
-
+        currentAlgorithmDisplayed = GameObject.Find("CurrentAlgorithmText").GetComponent<TMP_Text>();
         endBlinkColor = greenColor;
         rm = RoomManager.get();
 
@@ -60,7 +62,7 @@ public class DebTools: MonoBehaviour
     }
 
     public void stopBattleManager() { // Hacer que se centre al centro del mapa
-        gm.stopGame();
+        gm.stopBattle();
         gm.setCameraMode(CameraController.CAMERA_MODES.MANUAL);
         Debug.Log("Stop pressed");
         isDebToolsEnabled = true;
@@ -68,7 +70,7 @@ public class DebTools: MonoBehaviour
     }
 
     public void playBattleManager() {
-        gm.enableGame(); // Hacer una que sea reanudar.
+        gm.enableBattle(); // Hacer una que sea reanudar.
         gm.setCameraMode(CameraController.CAMERA_MODES.FOLLOW_PLAYER);
         Debug.Log("Play pressed");
         isDebToolsEnabled = false;
@@ -121,6 +123,9 @@ public class DebTools: MonoBehaviour
         tileImgTransform.sizeDelta = new Vector2(tileImgTransform.sizeDelta.x / 2, tileImgTransform.sizeDelta.y / 2);
     }
 
+    public static void changeTextCurrentAlgorithm(BRAIN_TYPES brainType) {
+        currentAlgorithmDisplayed.text = brainType.ToString().Replace("_BRAIN","");
+    }
 
     public void changeTile()
     {
@@ -143,18 +148,13 @@ public class DebTools: MonoBehaviour
     public void moveEnabled()
     {
         lastbuttonpressed = GUIActions.MOVE;
-        changeBlinkEle(MoveContainer, endBlinkColor);
-        gm.camaraFollowsPlayer = false; // Posiblemente al dar al stop
-        Debug.Log("Brush pressed");
-   
+        changeBlinkEle(MoveContainer, endBlinkColor);   
     }
 
     public void deleteEnemyEnabled()
     {
         lastbuttonpressed = GUIActions.DELETE;
-        changeBlinkEle(DeleteEnemyContainer, endBlinkColor);
-        Debug.Log("Delete pressed");
-        
+        changeBlinkEle(DeleteEnemyContainer, endBlinkColor);        
     }
 
   
@@ -196,15 +196,10 @@ public class DebTools: MonoBehaviour
             return;
 
         if (!overGUI && EventSystem.current.IsPointerOverGameObject())
-        {
             overGUI = true;
-            Debug.Log("He clickeado");
-        }
         else if (overGUI && !EventSystem.current.IsPointerOverGameObject())
-        {
             overGUI = false;
-            Debug.Log("He salido");
-        }
+        
 
         if (!overGUI) { 
             devToolsManagement();
@@ -230,7 +225,7 @@ public class DebTools: MonoBehaviour
 
             case GUIActions.DELETE:
                 if (Input.GetMouseButtonUp(0) && isEntityInPos)
-                    gm.deleteEnemy(entityID);
+                    gm.removeEntity(entityID);
                 break;
 
             case GUIActions.MOVE:

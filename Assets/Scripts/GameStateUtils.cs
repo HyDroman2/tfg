@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -8,26 +9,35 @@ public class CharacterState {
     public int id { get; set; }
 
     public MovableEntity.ENTITIES_TYPE type;
+    public bool isPlayer { get { return type == MovableEntity.ENTITIES_TYPE.PLAYER; } }
     public int attackRange;
     public int hp { get; set;}
     public int attackDamage { get; set;  }
     public int defense { get; set; }
-    public Vector2Int position { get; set; }
+    public Vector2Int pos { get; set; }
 
-
-
-    public CharacterState(int hp, int attackDamage, int defense, Vector2Int position, int id, MovableEntity.ENTITIES_TYPE type, int attackRange) {
+    public CharacterState(int hp, int attackDamage, int defense, Vector2Int pos, int id, MovableEntity.ENTITIES_TYPE type, int attackRange) {
         this.hp = hp;
         this.attackDamage = attackDamage;
         this.type = type;
         this.defense = defense;
-        this.position = position;
+        this.pos = pos;
         this.id = id;
         this.attackRange = attackRange;
     }
 
     public CharacterState clone() { // Hacer interfaz cloneable
-        return new CharacterState(hp, attackDamage, defense, position, id, type, attackRange);
+        return new CharacterState(hp, attackDamage, defense, pos, id, type, attackRange);
+    }
+
+    public override int GetHashCode()
+    {
+        return id.GetHashCode();
+    }
+
+    public override bool Equals(object obj)
+    {
+        return ((CharacterState)obj).id == id;
     }
 }
 
@@ -54,6 +64,9 @@ public class Attack : Action {
 
     public override CharacterState executeAction()
     {
+        if (victim.pos.distance(executor.pos) > executor.attackRange)
+            throw new System.Exception("Se ha realizado un ataque fuera de rango");
+
         CharacterState newGameStateVictim = victim.clone();
         newGameStateVictim.hp -= (executor.attackDamage - newGameStateVictim.defense);
         return newGameStateVictim;
@@ -68,10 +81,12 @@ public class Move : Action
     public override CharacterState executeAction()
     {
         CharacterState newCharacterState = executor.clone();
-        newCharacterState.position += direction.Vect;
+        newCharacterState.pos += direction.Vect;
         return newCharacterState;
     }
 }
+
+
 
 
 public class GameState {
@@ -81,6 +96,7 @@ public class GameState {
     public int[,] rawTiles { get { return map.rawTiles; } }
     public Map map;
     public Dictionary<Vector2Int, CharacterState> entitiesPosition;
+    public CharacterState ActualExecutor  { get { return getActualExecutor(); } }
     public int idActualExecutor = -1;
     public int numEnemigosMuertos = 0;
     public bool juegoFinalizado = false;
@@ -96,10 +112,10 @@ public class GameState {
         this.score = score;
         this.idActualExecutor = idActualExecutor;
         entitiesPosition = new Dictionary<Vector2Int, CharacterState>(enemies.Count + 1);
-        entitiesPosition.Add(player.position, player);
+        entitiesPosition.Add(player.pos, player);
 
         foreach (CharacterState enemy in enemies.Where(e => e is not null))
-            entitiesPosition.Add(enemy.position, enemy);
+            entitiesPosition.Add(enemy.pos, enemy);
              
     }
 
@@ -128,7 +144,7 @@ public class GameState {
 
         foreach (MovableEntity.Movements dir in MovableEntity.Movements.opList)
         {
-            Vector2Int pos = executor.position + dir.Vect;
+            Vector2Int pos = executor.pos + dir.Vect;
             if (rawTiles[pos.y, pos.x] == 1 && !entitiesPosition.ContainsKey(pos))
                 legalActions.Add(new Move(executor, dir));
         }
@@ -153,13 +169,13 @@ public class GameState {
         Vector2Int pos;
 
         List<Attack> enemiesInRange = new List<Attack>();
-        if (character.id == -1){
+        if (character.isPlayer){
             foreach (MovableEntity.Movements dir in MovableEntity.Movements.opList)
-                if (entitiesPosition.ContainsKey(pos = character.position + dir.Vect))
+                if (entitiesPosition.ContainsKey(pos = character.pos + dir.Vect))
                     enemiesInRange.Add(new Attack(character, entitiesPosition[pos]));
         }
         else
-            if ((player.position.distance(character.position)) <= character.attackRange)
+            if ((player.pos.distance(character.pos)) <= character.attackRange)
                 enemiesInRange.Add(new Attack(character, player));
 
         return enemiesInRange;
@@ -183,12 +199,13 @@ public class GameState {
     }
 
     private void ManageMove(Move mv) {
+
         CharacterState newCS = mv.executeAction(); // bug se mueve dos veces el mismo esqueleto
-        entitiesPosition.Remove(mv.executor.position);
-        entitiesPosition.Add(newCS.position, newCS);
+        entitiesPosition.Remove(mv.executor.pos);
+        entitiesPosition.Add(newCS.pos, newCS);
 
         // Update character state
-        if (newCS.id == -1)
+        if (newCS.isPlayer)
             player = newCS;
         else
             enemies[newCS.id] = newCS;
@@ -200,26 +217,26 @@ public class GameState {
     }
 
     private void ManageAttack(Attack attack) {
+
         CharacterState newCS = attack.executeAction();
         bool haMuerto = (newCS.hp <= 0) ? true:false;
 
-        // Update character state
-        if (newCS.id == -1)
+        if (newCS.isPlayer)
             player = newCS;
         else
             enemies[newCS.id] = newCS;
-        entitiesPosition[newCS.position] = newCS;
+        entitiesPosition[newCS.pos] = newCS;
 
         if (haMuerto)
-            if (newCS.id != -1)
+            if (!newCS.isPlayer)
                 eliminateEnemy(newCS);
-            else if (newCS.id == -1)
+            else
                 juegoFinalizado = true;
 
     }
 
     private void eliminateEnemy(CharacterState entity) {
-        entitiesPosition.Remove(entity.position);
+        entitiesPosition.Remove(entity.pos);
         enemies[entity.id] = null;
         numEnemigosMuertos++;
         score++;
@@ -227,14 +244,17 @@ public class GameState {
             juegoFinalizado = true;
         else if (idActualExecutor == entity.id)
             idActualExecutor = getNextExecutor();
-         // Se que es O(n pero es por el bien de la trama)
     }
 
+    public void eliminateEnemyById(int id) {
+        if(enemies[id] != null)
+            eliminateEnemy(enemies[id]);
+    }
     public void addEnemy(CharacterState entity) {
-        if (entitiesPosition.ContainsKey(entity.position))
+        if (entitiesPosition.ContainsKey(entity.pos))
             return;
         enemies.Add(entity);
-        entitiesPosition.Add(entity.position, entity);
+        entitiesPosition.Add(entity.pos, entity);
     }
 
 
@@ -268,6 +288,11 @@ public class GameState {
 
     }
 
+    public Room getRoomWithinEntity(CharacterState entity) {
+        if (!map.indexVectorRoom.ContainsKey(entity.pos))
+            return null;
+        return map.indexVectorRoom[entity.pos];
+    }
     public bool isTileInsideMap(Vector2Int pos) { 
         
         return map.tiles.Contains(pos);
@@ -278,9 +303,9 @@ public class GameState {
         if (entitiesPosition.ContainsKey(newPos))
             return;
         CharacterState cs = getCharacterStateByID(id);
-        cs.position = newPos;
-        entitiesPosition.Remove(cs.position);
-        entitiesPosition.Add(cs.position, cs);
+        cs.pos = newPos;
+        entitiesPosition.Remove(cs.pos);
+        entitiesPosition.Add(cs.pos, cs);
     }
 
   

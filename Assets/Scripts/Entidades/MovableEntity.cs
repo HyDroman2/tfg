@@ -1,10 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using VectorMethods;
 
 public abstract class MovableEntity : MonoBehaviour
 {
@@ -23,26 +21,23 @@ public abstract class MovableEntity : MonoBehaviour
         { ENTITIES_TYPE.RANGED_SKELETON, RangedSkeletonController.Data},
         { ENTITIES_TYPE.PLAYER, PlayerController.defaultStatePlayer}
     };
-    public static List<ENTITIES_TYPE> listaEnemigos { get { return models.Keys.ToList(); } }
     protected int percentageHealthBar = 100;
     private Slider healthBar;
     private string attackAnimationName;
     private bool isSelected = false;
     protected bool inMovement = false;
     public bool acted = false;
-    public static float MOVEMENT_SPEED = 1f / 0.1f;
-    public int id;
+    public static float MOVEMENT_SPEED = 1f / 0.001f;
+    public int id { get; set; }
     public sealed class Movements
     {
-        
-        public int Id { get; set; }
         public Vector2Int Vect { get; set; }
 
-        public static readonly Movements UP    = new (0, Vector2Int.up);
-        public static readonly Movements DOWN  = new (1, Vector2Int.down);
-        public static readonly Movements LEFT  = new (2, Vector2Int.left);
-        public static readonly Movements RIGHT = new (3, Vector2Int.right);
-        public static readonly Movements STAY  = new (4, Vector2Int.zero);
+        public static readonly Movements UP    = new (Vector2Int.up);
+        public static readonly Movements DOWN  = new (Vector2Int.down);
+        public static readonly Movements LEFT  = new (Vector2Int.left);
+        public static readonly Movements RIGHT = new (Vector2Int.right);
+        public static readonly Movements STAY  = new (Vector2Int.zero);
 
         public static readonly Movements[] opList= new Movements[] { UP, DOWN, LEFT, RIGHT };
         public static readonly Dictionary<Vector2Int, Movements> vectToMovement = new Dictionary<Vector2Int, Movements> {
@@ -51,13 +46,23 @@ public abstract class MovableEntity : MonoBehaviour
             { Vector2Int.left, LEFT },
             { Vector2Int.right, RIGHT },
         };
-        private Movements(int id, Vector2Int vect) {
-            Id = id;
+        private Movements(Vector2Int vect) {
             Vect = vect;
         }
        
     }
 
+    public virtual bool executeAction(Action action)
+    {
+        if (action == null)
+            return false;
+        if (action is Move)
+            moveTask(((Move)action).direction);
+        else
+            attack(((Attack)action).victim.pos);
+        return true;
+
+    }
     public virtual bool moveTask(Movements mv)
     {
         // Precondición se puede mover.
@@ -86,8 +91,8 @@ public abstract class MovableEntity : MonoBehaviour
         return acted;
     }
 
-    public virtual void attack(Vector2 pos) { // TODO solo esta hecho el ataque del personaje principal.Resolver no sirve para los que atacan de lejos. mirar solo la posicion
-        if (inMovement) //No Ataca porque esta inMovement pensar en si ataca a alguien lejos que haya uno en el camino de por medio. //Como lo hice puede atacar a travñes de los muros.
+    public virtual void attack(Vector2 pos) { 
+        if (inMovement) 
             return;
 
         Animator anim = GetComponent<Animator>();   
@@ -142,24 +147,23 @@ public abstract class MovableEntity : MonoBehaviour
         if (percentage < 0 || percentage > 100 || percentage > percentageHealthBar)
             return;
 
-        // Checkear si el porcentaje está dentro de los valores
         StartCoroutine(SmoothHealthBar(percentage));
     }
 
 
-    public void statsInit(CharacterState state) { // Separar de la obtencion de la barra
+    public void statsInit(CharacterState state) { 
         id = state.id;
         healthBar = transform.GetChild(0).GetChild(0).GetComponent<Slider>();
-        teletransport(state.position);
+        teletransport(state.pos);
         name = name + ' ' + state.id;
     }
 
     public void animationNamesInit(string attackAnimationName)
-    { // Pensar en poner los mismos nombres para las animaciones, tipo que el ataque sea compartido.
+    { 
         this.attackAnimationName = attackAnimationName;
     }
     public void eliminate() {
-        GameObject.Destroy(gameObject);
+        Destroy(gameObject);
     }
 
 

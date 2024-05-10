@@ -10,7 +10,8 @@ public class CameraController : MonoBehaviour
     private GameManager gm;
     private Camera cm;
     private CAMERA_MODES actualMode = CAMERA_MODES.STOP;
-
+    private bool oneTime = false;
+    private bool twoTime = false;
     public enum CAMERA_MODES
     {
         STOP, MANUAL, FOLLOW_PLAYER
@@ -33,6 +34,16 @@ public class CameraController : MonoBehaviour
         else if (Input.GetKey(KeyCode.Q))
             cm.orthographicSize = Mathf.Max(5, cm.orthographicSize - zoomSpeed);
 
+
+        if (Input.GetKey(KeyCode.I) && !oneTime)
+        {
+            GameManager.instance.endGame();
+            oneTime = true;
+        }
+        if (Input.GetKey(KeyCode.H) && !twoTime) {
+            GameManager.instance.resetGame();
+            twoTime = true;
+        }
 
         return movement;
     }
@@ -67,10 +78,9 @@ public class CameraController : MonoBehaviour
     public void setCameraMode(CAMERA_MODES mode) {
         actualMode = mode;
     }
-    //TODO: Mejorar esto porque puede dar lugar a bugs visuales.
     private void cameraFollowPlayer()
     {
-        Vector3 translation = gm.getPlayerPosition() - transform.position;
+        Vector3 translation = gm.playerPosition - transform.position;
         translation.z = 0;
         transform.Translate(translation, 0);
     }

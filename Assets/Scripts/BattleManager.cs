@@ -5,18 +5,24 @@ using static BattleManagerUtils;
 
 public class BattleManager : MonoBehaviour
 {
-    private bool playerTurn;
+    public bool playerTurn;
     private bool canEnemiesAct;
-    private bool canPlayerAct;
+    private bool playerActed;
+    private Action playerManualAction;
+
     private List<EnemyController> enemiesCtrl; // tiene en el index 0 al jugador y de ahi en arriba al resto.
     private IEnumerable<EnemyController> enemiesCtrlAlive { get { return enemiesCtrl.Where(chr => chr != null); } }
     PlayerController playerCtrl;
     private static BattleManager battleManager;
-    public bool dashTurn;
-    private int countDash;
+    public bool isDashTurn { get { return numTurn % (3 * 2) == 0; } }
+
+    private bool dashActivated;
+    public int numTurn { get; set; }
    
     public BRAIN_TYPES enemiesBrain { get; set; }
+    private Brain actualEnemiesBrain;
 
+    private Brain playerBrain;
 
     public static BattleManager get()
     {
@@ -40,34 +46,42 @@ public class BattleManager : MonoBehaviour
     {
         if (playerTurn)
             managePlayerTurn();
-        else if (countDash > 2) {
-            countDash = 0;
-            enablePlayerMovement();
-            dashTurn = true;
-            Debug.Log("Dashed");
-        }
+        else if (isDashTurn)
+            enablePlayerMovement(dashActivated = true);
         else
             manageEnemyTurn();
     }
-
+    public void storePlayerAction(Action act) {
+        if (playerManualAction == null)
+            playerManualAction = act;
+    
+    }
+    // QU¡ue la acción pueda venir del usuario o del auto y que el control de la GUI se comunique con rl battleManager
     private void managePlayerTurn() {
 
-        if (playerCtrl is PlayerControllerAuto && canPlayerAct) { // Se puede acelerar algo 
-            PlayerBrain playerBrain = new PlayerBrain(GameManager.instance.ActualGameState);
-            Action act = playerBrain.makeDecision()[0];
-            ((PlayerControllerAuto)playerCtrl).executeAction(act);
-            GameManager.instance.executeAutoPlayerAction(act); // Temp  Aqui tengo que tener en cuenta el dash
-            canPlayerAct = false;
-            Debug.Log("Player acts");
+        if (!playerActed)
+        {
+            Action playerMove = null;
+
+            if (GameManager.instance.autoplayEnabled) {
+                playerBrain.gs = GameManager.instance.ActualGameState;
+                playerMove = playerBrain.makeDecision()[0];
+            } else
+                playerMove = playerManualAction;
+
+
+            if (playerMove != null) {
+                playerCtrl.executeAction(playerMove);
+                GameManager.instance.executePlayerAction(playerMove, dashActivated); 
+                playerActed = true;
+
+            }
 
         }
-
+   
         if (!playerCtrl.hasMoved())
             return;
 
-        if (dashTurn)
-            dashTurn = false;
-        countDash++;
         enableEnemiesMovement();
     }
 
@@ -78,12 +92,18 @@ public class BattleManager : MonoBehaviour
         foreach (EnemyController enemy in enemiesCtrlAlive)
             enemy.acted = false;
         canEnemiesAct = true;
+        numTurn++;
 
     }
-    public void enablePlayerMovement() {
+
+    public void enablePlayerMovement(bool dashActivated = false) {
         playerTurn = true;
         playerCtrl.acted = false;
-        canPlayerAct = true;
+        playerActed = false;
+        numTurn++;
+        playerManualAction = null;
+        this.dashActivated = dashActivated;
+        Debug.Log(numTurn);
     }
 
     // Creo que es cuando cambia de mapa
@@ -92,10 +112,9 @@ public class BattleManager : MonoBehaviour
 
         if (canEnemiesAct) {
             canEnemiesAct = false;
-            Brain brain = createBrain(enemiesBrain, GameManager.instance.ActualGameState);
-            Action[] acciones = brain.makeDecision().ToArray();
+            updateBrainInformation();
+            Action[] acciones = actualEnemiesBrain.makeDecision().ToArray();
             GameManager.instance.executeActions(acciones);
-            Debug.Log("Enemy acts");
         }
 
         if (allEnemiesTakeAction())
@@ -103,60 +122,59 @@ public class BattleManager : MonoBehaviour
 
     }
 
-    public void setEnemiesBrainType(BRAIN_TYPES brainType) {
-        enemiesBrain = brainType;
-    }
-    public Brain createBrain(BRAIN_TYPES brainType, GameState state) {
-        Brain ret;
+ 
+    public void createBrain(BRAIN_TYPES brainType, GameState state) {;
 
         switch (brainType)
         {
             case BRAIN_TYPES.EAGER_BRAIN:
-                ret = new EagerEnemiesBrain(state);
+                actualEnemiesBrain = new EagerEnemiesBrain(state);
+                break;
+            case BRAIN_TYPES.EAGER_ASTAR_BRAIN:
+                actualEnemiesBrain = new EagerastarEnemiesBrain(state);
                 break;
             case BRAIN_TYPES.ALPHABETA_BRAIN:
-                ret = new AlphaBetaPruneBrain(state);
+                actualEnemiesBrain = new AlphaBetaPruneBrain(state);
                 break;
             case BRAIN_TYPES.DECISION_TREE_BRAIN:
-                ret = new DecisionTreeBrain(state);
+                actualEnemiesBrain = new DecisionTreeBrain(state);
                 break;
-            case BRAIN_TYPES.BEHAVIOR_TREE_BRAIN:                //ret = new BehaviorTree();
-                ret = new BehaviorTreeBrain(state);
+            case BRAIN_TYPES.BEHAVIOR_TREE_BRAIN:                
+                actualEnemiesBrain = new BehaviorTreeBrain(state);
                 break;
-
             default:
                 throw new System.Exception("Se ha introducido");
         }
-        return ret;
+        enemiesBrain = brainType;
+          
     }
 
+
+    public void setEnemiesBrainType(BRAIN_TYPES brainType)
+    {
+        createBrain(brainType, GameManager.instance.ActualGameState.clone());
+    }
+
+    public void updateBrainInformation() => actualEnemiesBrain.gs = GameManager.instance.ActualGameState.clone(); 
+    
     private bool allEnemiesTakeAction()
     {
-        foreach (EnemyController enemy in enemiesCtrlAlive)
-            if (!enemy.hasMoved())
-                return false;
-        return true;
+        return enemiesCtrlAlive.Where(ene => !ene.hasMoved()).ToArray().Length == 0;
     }
 
     private void coldStartBattleManager() {
+        createBrain(enemiesBrain, GameManager.instance.ActualGameState);
+        playerBrain = new PlayerBrain(GameManager.instance.ActualGameState);
         playerTurn = true;
         canEnemiesAct = false;
-        canPlayerAct = true;
-        dashTurn = false;
-        countDash = 0;
+        playerActed = false;
         enabled = true;
+        numTurn = 1;
     }
 
-    public void enableBattleManager(bool coldStart = false)
-    {
-        enabled = true;   
-    }
+    public void enableBattleManager() => enabled = true;   
 
- 
-    public void disableBattleManager()
-    {
-        enabled = false;
-    }
+    public void disableBattleManager() => enabled = false;
 
 
 }

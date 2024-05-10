@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using VectorMethods;
 using static BattleManagerUtils;
 
 public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de hacer que haya un temporal gs o encapsular el tree.
 {
+    private const int DISTANCE_CONSIDERED_NEAR = 10;
     CharacterState actualExecutor;
     DecisionTreeNode rangedRoot;
     DecisionTreeNode meleeRoot;
@@ -19,24 +19,30 @@ public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de h
         actions.Add("ChasePlayer", new TreeNodeAction(chasePlayer));
         actions.Add("HideBehindEnemy", new TreeNodeAction(hideBehindEnemy));
         actions.Add("AttackPlayer", new TreeNodeAction(attackPlayer));
+        actions.Add("Stay", new TreeNodeAction(stay));
 
         rangedRoot = rangedEnemyBehaviourTree();
         meleeRoot = meleeEnemyBehaviourTree();
         actualExecutor = gs.getActualExecutor();
         
     }
-
+   
     public DecisionTreeNode rangedEnemyBehaviourTree() {
         DecisionTreeNode areMoreEnemiesNear = new Decision(actions["ChaseEnemy"], actions["ChasePlayer"], areEnemyNear);
-        DecisionTreeNode areMoreEnemiesAliveNode = new Decision(actions["HideBehindEnemy"], actions["AttackPlayer"], areMoreEnemiesAlive);
-        DecisionTreeNode[] options = new DecisionTreeNode[] { areMoreEnemiesAliveNode, actions["AttackPlayer"], areMoreEnemiesNear };
+        DecisionTreeNode areMoreEnemiesAliveNode = new Decision(actions["HideBehindEnemy"], actions["AttackPlayer"], canHideBehindEnemy);
+        DecisionTreeNode isPlayerFightingNode = new Decision(actions["ChasePlayer"], actions["Stay"] , isPlayerFighting);
+        DecisionTreeNode[] options = new DecisionTreeNode[] { areMoreEnemiesAliveNode, actions["AttackPlayer"], isPlayerFightingNode, areMoreEnemiesNear };
         DecisionTreeNode distanceFromPlayerNode = new MultiDecision(options, distanceFromPlayerIndex);
         return distanceFromPlayerNode;
     }
 
     public DecisionTreeNode meleeEnemyBehaviourTree() {
-        DecisionTreeNode areMoreEnemiesNear = new Decision(actions["Block"], actions["ChasePlayer"], areEnemyNear);
-        DecisionTreeNode isPlayerInRangeNode = new Decision(actions["AttackPlayer"], areMoreEnemiesNear, isPlayerInRange);
+
+        DecisionTreeNode areMoreEnemiesNear = new Decision(actions["ChaseEnemy"], actions["ChasePlayer"], areEnemyNear);
+
+        DecisionTreeNode isPlayerInRangeNode = new Decision(actions["AttackPlayer"], actions["ChasePlayer"], isPlayerInRange);
+
+        DecisionTreeNode arePlayerNearNode = new Decision(isPlayerInRangeNode, areMoreEnemiesNear, arePlayerNear); // Hacer are player near TODO
         return isPlayerInRangeNode;
     }
     public Action[] decisionTreeAction() // Corregir
@@ -64,24 +70,31 @@ public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de h
 
     public bool areEnemyNear()
     {
-        return getNearestEnemy(10) != null;
+        return getNearestEnemyTo(gs.getActualExecutor(), DISTANCE_CONSIDERED_NEAR) != null;
     }
 
-    public int distanceFromPlayer()
+    public bool arePlayerNear()
     {
-        return (int)actualExecutor.position.distance(gs.player.position);
+        return gs.getActualExecutor().pos.distance(gs.player.pos) <= DISTANCE_CONSIDERED_NEAR;
+    }
+
+    public float distanceFromPlayer()
+    {
+        return actualExecutor.pos.distance(gs.player.pos);
     }
 
     public int distanceFromPlayerIndex()
     {
-        int distance = distanceFromPlayer();
+        float distance = distanceFromPlayer();
 
-        if (distance == 1) //Mejorar
+        if (distance == 1) 
             return 0;
         else if (distance <= actualExecutor.attackRange)
             return 1;
-        else
+        else if (distance < 5)
             return 2;
+        else
+            return 3;
 
     }
     public bool areMoreEnemiesAlive()
@@ -105,7 +118,7 @@ public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de h
 
     public bool isPlayerInRange()
     {
-        return Array.Exists(gs.legalMoves(actualExecutor), move => move is Attack);
+        return canAttackOneEntityToOther(gs.ActualExecutor, gs.player);
     }
 
     public Action attackPlayer()
@@ -116,38 +129,38 @@ public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de h
 
     public bool canReceiveDamageFromPlayer()
     {
-        return actualExecutor.position.distance(gs.player.position) == 1;
+        return actualExecutor.pos.distance(gs.player.pos) == 1;
     }
-
-    public bool areEnemyOneBlockDistance()
-    {
-        return getEnemyOneBlockDistance() != null;
-    }
-
-    public CharacterState getEnemyOneBlockDistance()
-    {
-        //MovableEntity.Movements.opList.FirstOrDefault(r => gs.entitiesPosition[actualExecutor.position + r.Vect].id != -1); TODO
-        foreach (MovableEntity.Movements move in MovableEntity.Movements.opList)
-            if (gs.entitiesPosition[actualExecutor.position + move.Vect].id != -1)
-                return gs.entitiesPosition[actualExecutor.position + move.Vect];
-        return null;
-    }
-
 
     public Action chaseEnemy()
     {
-        CharacterState nearestEnemy = getNearestEnemy();
-        return getNearestMoveTo(nearestEnemy);
+        CharacterState nearestEnemy = getNearestEnemyTo(gs.getActualExecutor()); // TODO: Aqui se genera el problema
+        return getNearestMoveTo(gs.ActualExecutor, nearestEnemy);
+    }
+
+    public Action stay()
+    {
+        return new Move(gs.ActualExecutor, MovableEntity.Movements.STAY);
     }
 
     public Action chasePlayer()
     {
-        return getNearestMoveTo(gs.player);
+        return getNearestMoveTo(gs.ActualExecutor, gs.player);
+    }
+
+    public bool isPlayerFighting() {
+        CharacterState enemy = getNearestEnemyTo(gs.player);
+
+        if (enemy == null || enemy.pos.distance(gs.player.pos) != 1)
+            return false;
+        else
+            return true;
+    
     }
 
     public bool isInDeadEnd()
     {
-        return SearchMethods.bfs(Vector2Int.CeilToInt(actualExecutor.position), 50, gs) == null;
+        return SearchMethods.bfs(Vector2Int.CeilToInt(actualExecutor.pos), 50, gs) == null;
     }
 
     public bool canHideBehindEnemy() {
@@ -158,92 +171,43 @@ public class DecisionTreeBrain : EnemiesBrain // Tengo que pensar una forma de h
     }
     public Action block()
     {
-        CharacterState nearestEnemy = getNearestEnemy();
+        CharacterState nearestEnemy = getNearestEnemyTo(gs.getActualExecutor());
         CharacterState player = gs.player;
         // Probablemente pueda hacer un método.
-        float x = (player.position.x + nearestEnemy.position.x) / 2;
-        float y = (player.position.y + nearestEnemy.position.y) / 2;
+        float x = (player.pos.x + nearestEnemy.pos.x) / 2;
+        float y = (player.pos.y + nearestEnemy.pos.y) / 2;
         Vector2Int endPos = new Vector2Int(((int)Math.Ceiling(x)), ((int)Math.Ceiling(y)));
-        return getNearestMoveToPos(endPos);
-
+        return getNearestMoveToPos(gs.ActualExecutor, endPos);
     }
 
     // Problema es que se trata de esconder cuando no puede esconderse, por lo que se traba.
     public Action hideBehindEnemy()
     {
         CharacterState player = gs.player;
-        CharacterState nearestEnemy = getNearestEnemy();
+        CharacterState nearestEnemy = getNearestEnemyTo(gs.getActualExecutor());
 
-        Vector2 temp = nearestEnemy.position - player.position;
+        Vector2 temp = nearestEnemy.pos - player.pos;
 
-        if (nearestEnemy.position.distance(player.position) > 2)
-            return getNearestMoveTo(nearestEnemy);
+        if (nearestEnemy.pos.distance(player.pos) > 2)
+            return getNearestMoveTo(gs.ActualExecutor,nearestEnemy);
 
 
         if (Math.Abs(temp.x) >= Math.Abs(temp.y))
         { // Refractor 
 
             if (temp.x > 0)
-                return getNearestMoveToPos(nearestEnemy.position + Vector2Int.right);
+                return getNearestMoveToPos(gs.ActualExecutor,nearestEnemy.pos + Vector2Int.right);
             else
-                return getNearestMoveToPos(nearestEnemy.position + Vector2Int.left);
+                return getNearestMoveToPos(gs.ActualExecutor,nearestEnemy.pos + Vector2Int.left);
         }
         else
             if (temp.y > 0)
-            return getNearestMoveToPos(nearestEnemy.position + Vector2Int.up);
+            return getNearestMoveToPos(gs.ActualExecutor,nearestEnemy.pos + Vector2Int.up);
         else
-            return getNearestMoveToPos(nearestEnemy.position + Vector2Int.down);
+            return getNearestMoveToPos(gs.ActualExecutor,nearestEnemy.pos + Vector2Int.down);
 
     }
 
-    public CharacterState getNearestEnemy(float minDistance = float.PositiveInfinity)
-    { // TODO igual aqui hay que hacer algo
-        CharacterState nearestEnemy = null;
-        foreach (CharacterState enemy in gs.enemiesAlive)
-        {
-            float distance = actualExecutor.position.distance(enemy.position);
-            if (distance < minDistance && enemy.id != actualExecutor.id)
-            {
-                minDistance = distance;
-                nearestEnemy = enemy;
-            }
-        }
-        return nearestEnemy;
-    }
-
-    public Action getNearestMoveTo(CharacterState entity)
-    {
-        float minDistance = float.PositiveInfinity;
-        Action moveTo = null;
-        foreach (Action move in gs.legalMoves().Where(m => m is Move)) { 
-            float distance = (actualExecutor.position + ((Move)move).direction.Vect).distance(entity.position);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                moveTo = move;
-            }
-        }
-
-        return moveTo;
-    }
-
-    public Action getNearestMoveToPos(Vector2Int pos)
-    {
-        float minDistance = float.PositiveInfinity;
-        Action moveTo = new Move(gs.getActualExecutor(), MovableEntity.Movements.STAY);
-        foreach (Action move in gs.legalMoves().Where(m => m is Move))
-        {
-            float distance = (actualExecutor.position + ((Move)move).direction.Vect).distance(pos);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                moveTo = move;
-            }
-
-        }
- 
-        return moveTo;
-    }
 
 
 }

@@ -1,18 +1,25 @@
 using UnityEngine;
 
-public abstract class PlayerController : MovableEntity
+public class PlayerController : MovableEntity
 {
 
     public static PlayerController instance;
     public Movements face = Movements.DOWN;
-    public bool dashActive = false;
-    public bool moves = false;
-    private static int BASE_HP = 1000;
+    private static int BASE_HP = 100000;
     private static int BASE_ATTACK = 10;
     private static int BASE_DEFENSE = 0;
     private static int BASE_RANGE = 1;
-    private static CharacterState data = new CharacterState(BASE_HP, BASE_ATTACK, BASE_DEFENSE, new UnityEngine.Vector2Int(-1, -1), -1, ENTITIES_TYPE.PLAYER, BASE_RANGE);
+    private static CharacterState data = new CharacterState(BASE_HP, BASE_ATTACK, BASE_DEFENSE, new Vector2Int(-1, -1), -1, ENTITIES_TYPE.PLAYER, BASE_RANGE);
     public static CharacterState defaultStatePlayer { get { return data.clone(); } }
+
+
+    public int getBaseHp() {
+        return BASE_HP;
+    }
+    public static string getInfoBaseStats()
+    {
+        return string.Format("Player: HP:{0} ATK: {1}, DEF: {2} Range: {3}", BASE_HP, BASE_ATTACK, BASE_DEFENSE, BASE_RANGE);
+    }
 
     private void Awake()
     {
@@ -22,7 +29,7 @@ public abstract class PlayerController : MovableEntity
     }
 
     
-    public override bool moveTask(Movements mv) {
+    public override bool moveTask (Movements mv) {
         if (acted && inMovement)
             return false;
         changeFaceDirection(mv);
@@ -55,15 +62,40 @@ public abstract class PlayerController : MovableEntity
     }
 
 
-    private void OnDestroy()
+    public Movements getMovement()
     {
-        GameManager.instance.loseGame();
+
+        Movements movement = Movements.STAY;
+
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+            movement = Movements.UP;
+        else if (Input.GetKeyDown(KeyCode.DownArrow))
+            movement = Movements.DOWN;
+        else if (Input.GetKeyDown(KeyCode.RightArrow))
+            movement = Movements.RIGHT;
+        else if (Input.GetKeyDown(KeyCode.LeftArrow))
+            movement = Movements.LEFT;
+
+        return movement;
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void Update()
     {
-        Debug.Log("Wall");
+        if (GameManager.instance.autoplayEnabled || hasMoved())
+            return;
+
+        Movements mv = getMovement();
+        if (mv != Movements.STAY && !inMovement)
+        {
+            changeFaceDirection(mv);
+            GameManager.instance.executePlayerMove(mv);
+        }
+        else if (Input.GetKeyDown(KeyCode.A))
+        {
+            Vector2Int pos = new Vector2Int((int)transform.position.x, (int)transform.position.y) + face.Vect; // TODO
+            GameManager.instance.executePlayerAttack(pos);
+        }
+
     }
 
-   
 }

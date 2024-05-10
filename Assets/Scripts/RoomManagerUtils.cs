@@ -6,14 +6,28 @@ using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
+
 public abstract class Room
 {
+    private static int ID_GENERATOR_INDEX = 0;
+    public int id { get; set; }
     protected Vector2Int[] tiles;
     protected int[] doorTilesIndex;
+    protected int centerIndex;
+
+    protected Room() {
+        id = ID_GENERATOR_INDEX;
+        ID_GENERATOR_INDEX++;
+    }
+    public Vector2Int Center { get { return tiles[centerIndex]; } }
    
     public Vector2Int[] getTiles()
     {
         return tiles;
+    }
+
+    public Vector2Int getCenter() {
+        return tiles[centerIndex];
     }
     public Vector2Int[] getDoorTiles()
     {
@@ -29,13 +43,27 @@ public abstract class Room
             tiles[tile] = new Vector2Int(tiles[tile].x + newStart.X, tiles[tile].y + newStart.Y);
     }
 
+    public override bool Equals(object obj)
+    {
+        if (obj is not Room)
+            return false;
+
+        Room r = obj as Room;
+        return id == r.id;
+    }
+
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode(); // Pensar
+    }
+
 }
 
 public abstract class RoomGeneric : Room
 {
     protected abstract void generateTiles();
-
-    //protected abstract void randomGenerateTiles();
+    protected RoomGeneric(): base() {}
 }
 
 public class RoomSqr : RoomRectangle
@@ -48,12 +76,13 @@ public class RoomRectangle : RoomGeneric
 {
     private int basis;
     private int height;
-    public RoomRectangle(int basis, int height)
+    public RoomRectangle(int basis, int height): base()
     {
         this.basis = basis;
         this.height = height;
         generateTiles();
         generateDoorTiles();
+
     }
 
     protected override void generateTiles()
@@ -62,6 +91,7 @@ public class RoomRectangle : RoomGeneric
         for (int i = 0; i < basis; i++)
             for (int j = 0; j < height; j++)
                 tiles[i * basis + j] = new Vector2Int(j, i);
+        centerIndex = (basis * height) / 2;
     }
 
     private void generateDoorTiles() {
@@ -106,8 +136,15 @@ public class Map {
         this.corridorTiles = corridorTiles;
         tiles = new HashSet<Vector2Int>();
         tiles.UnionWith(corridorTiles);
-        foreach (Room aux in rooms) // TODO
-            tiles.UnionWith(aux.getTiles());
+        foreach (Room r in rooms)
+            tiles.UnionWith(r.getTiles());
+
+        indexVectorRoom = new Dictionary<Vector2Int, Room>(tiles.Count);
+
+        foreach (Room r in rooms)
+            foreach (Vector2Int t in r.getTiles())
+                indexVectorRoom.Add(t, r);
+
         this.bounds = bounds;
         generateRawInformation();
     }
@@ -149,21 +186,21 @@ public class Map {
 
    
 }
-public class MapFactory
+public class MapGenerator
 {
 
 
     public static int squareSize = 16;
     public static int squareHeightMap = 2;
     public static int squareWidthMap = 4;
-    public static int maxNumRooms = squareHeightMap * squareWidthMap;
+    public static int maxNumRooms { get { return squareHeightMap * squareWidthMap; } }
     public static int maxSizeHab = squareSize / 2;
     public static int minSizeHab = maxSizeHab / 2;
 
 
     List<Room> rooms;
     HashSet<Vector2Int> corridorTiles;
-    Room[,] occupiedSlots;
+    Room[] occupiedSlots;
    
     public void generateCorridors()
     {
@@ -171,9 +208,16 @@ public class MapFactory
         if (rooms.Count <= 1)
             return;
 
+        HashSet<Vector2Int> roomTiles = new HashSet<Vector2Int>();
+        IEnumerable<Vector2Int[]> tilesByRoom = rooms.Select(r => r.getTiles());
+
+        foreach (Vector2Int[] tiles in tilesByRoom)
+            roomTiles.UnionWith(tiles);
+
         foreach (KeyValuePair<Room, HashSet<Room>> entry in generateRoomConnections())
-            foreach (Room room in entry.Value)
-                corridorTiles.UnionWith(generateCorridor(entry.Key, room));
+            foreach (Room room in entry.Value) {
+                corridorTiles.UnionWith(generateCorridor(entry.Key, room).Where(t => !roomTiles.Contains(t)));
+            }
 
     }
 
@@ -218,6 +262,10 @@ public class MapFactory
 
     public Map generateNewMap(string tipo, int numHab)
     {
+        if (numHab > maxNumRooms) {
+            throw new Exception(string.Format("Introduced rooms exceeded max num of the map Max:{0} Introduced:{1}", maxNumRooms, numHab));
+        }
+
         initDataStructures();
         Map map = generateNewSimple(numHab); // Cambiar un poco
         deleteDataStructures();
@@ -226,7 +274,7 @@ public class MapFactory
 
     public void initDataStructures() {
         rooms = new List<Room>();
-        occupiedSlots = new Room[squareHeightMap, squareWidthMap];
+        occupiedSlots = new Room[squareHeightMap * squareWidthMap];
         corridorTiles = new HashSet<Vector2Int>();
        
     }
@@ -253,39 +301,36 @@ public class MapFactory
     private bool createRoom(int squareSlot)
     {
 
-        int size = Random.Range(minSizeHab, maxSizeHab);
+        //int size = Random.Range(minSizeHab, maxSizeHab);
+        int size = maxSizeHab;
         Point start = new Point(Random.Range(2, squareSize - size), Random.Range(2, squareSize - size));
         start = normalizeToSlot(start, squareSlot);
         Room room = new RoomSqr(size); //Lo logico es hacer que el random este fuera, no es createRandomRoom
         return addRoom(room, start); // Tambien puede ser ventajoso poner el start en la room
     }
 
+
     private bool addRoom(Room room, Point pos)
     {
         room.moveRoomTo(pos);
-        Vector2Int slot;
-        HashSet<Vector2Int> newOccupiedSlots = new HashSet<Vector2Int>();
+        int[] newOccupiedSlots = room.getTiles().Select(t => getSlotOf(t)).Distinct().ToArray();
 
-        foreach (Vector2Int tile in room.getTiles())
+        int[] conflictOccupiedSlots = newOccupiedSlots.Where(s => occupiedSlots[s] != null).ToArray(); // Que pasa cuando esta vacio.
+
+        if (conflictOccupiedSlots.Length != 0)
+            return false;
+        else
         {
-            slot = getSlotOf(tile);
-
-            if (occupiedSlots.GetLength(1) <= slot.x || occupiedSlots.GetLength(0) <= slot.y)
-                return false; // No es necesario para algunas por precond.
-
-            if (occupiedSlots[slot.y, slot.x] == null)
-                newOccupiedSlots.Add(slot);
-            else
-                return false;
+            rooms.Add(room);
+            foreach (int slot in newOccupiedSlots)
+                occupiedSlots[slot] = room;
+            return true;
         }
 
-        rooms.Add(room);
-        foreach (Vector2Int slt in newOccupiedSlots)
-            occupiedSlots[slt.y, slt.x] = room;
-        return true;
     }
 
-    private Vector2Int getSlotOf(Vector2Int tile) => new Vector2Int((tile.x / squareSize),(tile.y / squareSize));
+
+    private int getSlotOf(Vector2Int tile) => (tile.y / squareSize) * squareWidthMap + (tile.x / squareSize) % squareWidthMap;
     private Point normalizeToSlot(Point n, int squareSlot)
     {
         int slotWidthPos = (squareSlot % squareWidthMap) * squareSize;

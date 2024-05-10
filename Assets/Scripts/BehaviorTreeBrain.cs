@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using VectorMethods;
 using static BattleManagerUtils;
-using Random = UnityEngine.Random;
 
 public abstract class Tarea {
     public abstract bool run();
@@ -35,8 +34,8 @@ public class NonDeterministicSelector : ControlTask {
     {
         foreach (Tarea h in ShuffleList<Tarea>.shuffle(hijos))
             if (h.run())
-                return false;
-        return true;
+                return true;
+        return false;
     }
 }
 
@@ -74,9 +73,31 @@ public abstract class GameStatTask : Tarea
     protected GameStatTask(BehaviorTreeBrain bt)
     { this.bt = bt; }
 }
+
+
+public class ChasePlayerTask : GameStatTask
+{
+    public ChasePlayerTask(BehaviorTreeBrain bt) : base(bt) { }
+
+
+    public override bool run()
+    {
+        if (gs.ActualExecutor.pos.distance(gs.player.pos) >= 2) { // Mirar bien esto TODO
+            Action act = bt.getNearestMoveTo(gs.ActualExecutor, gs.player);
+            if (act != null)
+            {
+                bt.lastActionAdded = act;
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+
+}
 public class AttackTask : GameStatTask
 {
-     
     public AttackTask(BehaviorTreeBrain bt) : base(bt){}
 
     public override bool run()
@@ -91,40 +112,43 @@ public class AttackTask : GameStatTask
         return false;
     }
 
-
 }
 
-public class BlockCorridor : GameStatTask
+
+public class PlayerInSameRoomTask : GameStatTask
 {
-
-    public BlockCorridor(BehaviorTreeBrain bt) : base(bt) { }
+    public PlayerInSameRoomTask(BehaviorTreeBrain bt) : base(bt) { }
 
     public override bool run()
     {
-        
-        return false;
+        Room roomPlayer = gs.getRoomWithinEntity(gs.player);
+        Room roomEnemy = gs.getRoomWithinEntity(gs.ActualExecutor);
+
+        if (roomPlayer is null || roomEnemy is null)
+            return false;
+        else
+            return roomPlayer.Equals(roomEnemy);
     }
-
-
 }
+public class NumEnemiesInSameRoomTask : GameStatTask {
 
-public class MultipleEnemiesTask : GameStatTask {
-
-    public MultipleEnemiesTask(BehaviorTreeBrain bt):base(bt){}
+    public NumEnemiesInSameRoomTask(BehaviorTreeBrain bt):base(bt){}
 
     public override bool run()
     {
-        GameState gs = GameManager.instance.ActualGameState; // Incorrecto
-        int numEnemiesNear = 0;
+        int enemiesInSameRoom = 0;
+        CharacterState actualExecutor = gs.ActualExecutor;
+        Room roomExecutor = gs.getRoomWithinEntity(actualExecutor);
+        Room roomEnemy;
 
-        foreach (CharacterState enemy in gs.enemiesAlive)
-            if (enemy.id == gs.idActualExecutor && enemy.position.distance(gs.getActualExecutor().position) <= 5)
-                numEnemiesNear++;
+        if (roomExecutor == null)
+            return false;
 
-        if (numEnemiesNear >= 3)
-            return true;
+        foreach (CharacterState enemy in gs.enemiesAlive.Where(ene => ene.id != actualExecutor.id))
+            if ((roomEnemy = gs.getRoomWithinEntity(enemy)) != null && roomExecutor.Equals(roomEnemy))
+                enemiesInSameRoom++;
 
-        return false;
+        return (enemiesInSameRoom > 0) ? true: false;
     }
 
 
@@ -136,14 +160,17 @@ public class LoseTimeTask : GameStatTask
 
     public override bool run()
     { 
-        float maxDistance = float.NegativeInfinity;
-        CharacterState actualExecutor = gs.getActualExecutor();
+        float maxDistance = float.MinValue;
+        CharacterState actualExecutor = gs.ActualExecutor;
         Action act; // Poner bien
         act = new Move(actualExecutor, MovableEntity.Movements.STAY);
 
         foreach (Action move in gs.legalMoves().Where(m => m is Move)) // Actual executor
         {
-            float distance = (actualExecutor.position + ((Move)move).direction.Vect).distance(gs.player.position);
+            Vector2Int newPos = actualExecutor.pos + ((Move)move).direction.Vect;
+            if (!gs.map.indexVectorRoom.ContainsKey(newPos))
+                continue;
+            float distance = newPos.distance(gs.player.pos);
             if (distance > maxDistance)
             {
                 maxDistance = distance;
@@ -154,24 +181,6 @@ public class LoseTimeTask : GameStatTask
         return true;
     }
 
-
-    public Action getNearestMoveTo(CharacterState entity)
-    {
-        float minDistance = float.PositiveInfinity;
-        Action moveTo = null;
-        foreach (Action move in gs.legalMoves().Where(m => m is Move))
-        {
-            float distance = (gs.getActualExecutor().position + ((Move)move).direction.Vect).distance(entity.position);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                moveTo = move;
-            }
-        }
-
-        return moveTo;
-    }
-
 }
 
 public class InCorridor : GameStatTask
@@ -180,35 +189,45 @@ public class InCorridor : GameStatTask
 
     public override bool run()
     {
-        return gs.map.corridorTiles.Contains(gs.getActualExecutor().position);
+        return bt.IsEntityInCorridor(gs.ActualExecutor);
     }
 
 }
 
 
-public class GoToWiderPosition : GameStatTask
+
+public class GoToNearestRoomTask : GameStatTask
 {
-    public GoToWiderPosition(BehaviorTreeBrain bt) : base(bt) { }
+    public GoToNearestRoomTask(BehaviorTreeBrain bt) : base(bt) { }
+
+    private Room getNearestRoomToPos(Vector2Int pos)
+    {
+
+        float minDistance = float.MaxValue;
+        Room retRoom = null;
+        foreach (Room room in gs.map.rooms)
+        {
+            float dist = room.Center.distance(pos);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                retRoom = room;
+            }
+        }
+        return retRoom;
+
+    }
 
     public override bool run()
     {
-        Room habitacion = ShuffleList<Room>.pickRandomElement(gs.map.rooms);
-        Vector2Int baldosa = ShuffleList<Vector2Int>.pickRandomElement(habitacion.getTiles());
-        List<Vector2Int> positions = SearchMethods.astar(gs.getActualExecutor().position, baldosa, gs); // No pasa la accion.
-        if (positions != null && positions.Count > 1) {
-            Vector2Int moveVect = positions[1] - gs.getActualExecutor().position;
-            bt.lastActionAdded = new Move(gs.getActualExecutor(), MovableEntity.Movements.vectToMovement[moveVect]);
-            return true; // GoToWiderPosition
-        }
+        Vector2Int pos = gs.ActualExecutor.pos;
+        Room nearestRoom = getNearestRoomToPos(pos);
+        bt.lastActionAdded = bt.getNearestMoveToPos(gs.ActualExecutor, nearestRoom.Center);
 
-        return false;
+        return true;
     }
 
  
-    public bool isPlayerInRange()
-    {
-        return Array.Exists(gs.legalMoves(), move => move is Attack);
-    }
 }
 
 public class BehaviorTreeBrain : EnemiesBrain{
@@ -222,17 +241,20 @@ public class BehaviorTreeBrain : EnemiesBrain{
         Tarea inNarrowPosition = new InCorridor(this);
         Tarea attack = new AttackTask(this);
         Tarea loseTime = new LoseTimeTask(this);
-        Tarea goToWiderPosition = new GoToWiderPosition(this);
-        Tarea multipleEnemiesNear = new MultipleEnemiesTask(this);
-        
+        Tarea goToNearestRoom = new GoToNearestRoomTask(this);
+        Tarea areMoreEnemiesInSameRoom = new NumEnemiesInSameRoomTask(this);
+        Tarea chasePlayer = new ChasePlayerTask(this);
+        Tarea isPlayerInSameRoom = new PlayerInSameRoomTask(this);
 
-        Tarea SelectorGoToWiderPosition = new Selector(new Tarea[] { goToWiderPosition, attack });
+        Tarea SelectorGoToWiderPosition = new NonDeterministicSelector(new Tarea[] { goToNearestRoom, attack });
         Tarea sequenceAvoidCorridor = new Sequence(new Tarea[] { inNarrowPosition, SelectorGoToWiderPosition });
 
-        Tarea nonDeterministicSelector = new NonDeterministicSelector(new Tarea[] { loseTime, attack }); // Aqui seria block corridor
-        Tarea sequenceMultipleEnemiesRoom = new Sequence(new Tarea[] { multipleEnemiesNear, nonDeterministicSelector });
+        Tarea attackPlayerSelector = new Selector(new Tarea[] { chasePlayer, attack }); // Poner tarea chase Player
 
-        Tarea sequenceFewEnemiesRoom = new Sequence(new Tarea[] { loseTime, attack});
+        Tarea sequenceMultipleEnemiesRoom = new Sequence(new Tarea[] { isPlayerInSameRoom, areMoreEnemiesInSameRoom, attackPlayerSelector });
+
+
+        Tarea sequenceFewEnemiesRoom = new NonDeterministicSelector(new Tarea[] { loseTime, attack});
 
 
         root = new Selector(new Tarea[] { sequenceAvoidCorridor, sequenceMultipleEnemiesRoom, sequenceFewEnemiesRoom });
@@ -258,9 +280,9 @@ public class BehaviorTreeBrain : EnemiesBrain{
         {
             takeADecision();
             if (lastActionAdded == null)
-                accionesGeneradas.Add(new Move(cs, MovableEntity.Movements.STAY));
-            else
-                accionesGeneradas.Add(lastActionAdded);
+                lastActionAdded = new Move(cs, MovableEntity.Movements.STAY);
+            
+            accionesGeneradas.Add(lastActionAdded);
 
             gs.applyAction(lastActionAdded);
             lastActionAdded = null;

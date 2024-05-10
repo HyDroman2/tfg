@@ -13,7 +13,6 @@ public class RoomManager:MonoBehaviour
     private Grid mainGrid;
     public BoundsInt wallBounds;
     public Map map;
-    public Vector2Int[] getTiles { get { return map.tiles.ToArray(); } }
     public TileBase tileAsset;
     public TileBase defaultTile;
     readonly int cameraWidthTiles = 20;
@@ -27,7 +26,6 @@ public class RoomManager:MonoBehaviour
         tilemap = createTilemap("Tilemap");
 
     }
-
 
     public static RoomManager get()
     {
@@ -143,64 +141,6 @@ public class RoomManager:MonoBehaviour
     public void loadMap(int[,] rawTiles)
     {
         loadMap(new Map(rawTiles));
-
-        //List<Vector3Int> tiles = new List<Vector3Int>();
-
-        //putColorLayer(tilemapWall, map.bounds, Color.green);
-
-        //for (int i = 0; i < 16; i++)
-        //    for (int j = 0; j < 16; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-        //putColorVector(tiles.ToArray(), Color.yellow);
-        //tiles.Clear();
-        //for (int i = 0; i < 16; i++)
-        //    for (int j = 16; j < 32; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-
-        //putColorVector(tiles.ToArray(), Color.grey);
-
-        //tiles.Clear();
-
-        //for (int i = 32; i < 48; i++)
-        //    for (int j = 16; j < 32; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-        //putColorVector(tiles.ToArray(), Color.grey);
-        //tiles.Clear();
-
-        //for (int i = 32; i < 48; i++)
-        //    for (int j = 0; j < 16; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-
-        //putColorVector(tiles.ToArray(), Color.yellow);
-
-        //tiles.Clear();
-
-        //for (int i = 48; i < 64; i++)
-        //    for (int j = 0; j < 16; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-        //putColorVector(tiles.ToArray(), Color.grey);
-        //tiles.Clear();
-        //for (int i = 48; i < 64; i++)
-        //    for (int j = 16; j < 32; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-
-        //putColorVector(tiles.ToArray(), Color.yellow);
-
-        //tiles.Clear();
-
-        //for (int i = 16; i < 32; i++)
-        //    for (int j = 16; j < 32; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-        //putColorVector(tiles.ToArray(), Color.yellow);
-        //tiles.Clear();
-
-        //for (int i = 16; i < 32; i++)
-        //    for (int j = 0; j < 16; j++)
-        //        tiles.Add(new Vector3Int(i, j));
-
-        //putColorVector(tiles.ToArray(), Color.grey);
-
-
     }
 
     public BoundsInt extendMapCameraVision(BoundsInt bounds) {
