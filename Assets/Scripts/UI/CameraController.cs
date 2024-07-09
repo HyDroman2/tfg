@@ -48,14 +48,11 @@ public class CameraController : MonoBehaviour
         return movement;
     }
 
-    // Start is called before the first frame update
     void Start()
     {
         gm = GameManager.instance;
         cm = GetComponent<Camera>();
     }
-
-    // Update is called once per frame
     void Update()
     {
 

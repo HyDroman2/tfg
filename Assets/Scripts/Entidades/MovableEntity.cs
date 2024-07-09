@@ -27,7 +27,7 @@ public abstract class MovableEntity : MonoBehaviour
     private bool isSelected = false;
     protected bool inMovement = false;
     public bool acted = false;
-    public static float MOVEMENT_SPEED = 1f / 0.001f;
+    public static float MOVEMENT_SPEED = 1f / 0.0001f;
     public int id { get; set; }
     public sealed class Movements
     {
@@ -75,10 +75,8 @@ public abstract class MovableEntity : MonoBehaviour
             return true;
         }
 
-        // Mejorar implementacion de esta movida.
         Vector2Int endPostition = new Vector2Int((int)transform.position.x, (int)transform.position.y) + mv.Vect;
         inMovement = true;
-        //await SmoothMovementTask(endPostition);
         StartCoroutine(SmoothMovement(endPostition));
         return true;
 

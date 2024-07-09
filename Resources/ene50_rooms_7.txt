@@ -1,0 +1,221 @@
+Entities Stats: 
+
+Player: HP:500000 ATK: 10, DEF: 0 Range: 1
+Skeleton: HP:20 ATK: 10, DEF: 0 Range: 1
+ArmoredSkeleton: HP:50 ATK: 10, DEF: 5 Range: 1
+RangedSkeleton: HP:10 ATK: 15, DEF: 0 Range: 2
+End entities Stats: 
+
+Dungeon config params: 
+No Stages: 20
+No Enemies: 50
+No Rooms: 7
+End Dungeon config params 
+
+Accumulative end results:
+(EAGER_ASTAR) Score: 1000 turnos: 9396 hp: 303490
+(EAGER) Score: 1000 turnos: 11910 hp: 374080
+(BEHAVIOR_TREE) Score: 1000 turnos: 17040 hp: 433820
+(DECISION_TREE) Score: 1000 turnos: 14890 hp: 386355
+
+Partial results:
+STAGE 0: 
+Number of enemies by type
+SKELETON:14
+ARMORED_SKELETON:16
+RANGED_SKELETON:20
+(EAGER_ASTAR) Score: 50 turnos: 434 hp: 489200
+(EAGER) Score: 50 turnos: 514 hp: 490270
+(BEHAVIOR_TREE) Score: 50 turnos: 764 hp: 496780
+(DECISION_TREE) Score: 50 turnos: 662 hp: 491495
+
+STAGE 1: 
+Number of enemies by type
+SKELETON:17
+ARMORED_SKELETON:19
+RANGED_SKELETON:14
+(EAGER_ASTAR) Score: 50 turnos: 492 hp: 484635
+(EAGER) Score: 50 turnos: 624 hp: 491285
+(BEHAVIOR_TREE) Score: 50 turnos: 962 hp: 496235
+(DECISION_TREE) Score: 50 turnos: 684 hp: 493895
+
+STAGE 2: 
+Number of enemies by type
+SKELETON:21
+ARMORED_SKELETON:16
+RANGED_SKELETON:13
+(EAGER_ASTAR) Score: 50 turnos: 452 hp: 491490
+(EAGER) Score: 50 turnos: 582 hp: 494715
+(BEHAVIOR_TREE) Score: 50 turnos: 758 hp: 496960
+(DECISION_TREE) Score: 50 turnos: 700 hp: 493120
+
+STAGE 3: 
+Number of enemies by type
+SKELETON:21
+ARMORED_SKELETON:19
+RANGED_SKELETON:10
+(EAGER_ASTAR) Score: 50 turnos: 534 hp: 496500
+(EAGER) Score: 50 turnos: 662 hp: 493555
+(BEHAVIOR_TREE) Score: 50 turnos: 816 hp: 496405
+(DECISION_TREE) Score: 50 turnos: 800 hp: 495245
+
+STAGE 4: 
+Number of enemies by type
+SKELETON:15
+ARMORED_SKELETON:21
+RANGED_SKELETON:14
+(EAGER_ASTAR) Score: 50 turnos: 556 hp: 496020
+(EAGER) Score: 50 turnos: 636 hp: 491880
+(BEHAVIOR_TREE) Score: 50 turnos: 920 hp: 494810
+(DECISION_TREE) Score: 50 turnos: 784 hp: 495945
+
+STAGE 5: 
+Number of enemies by type
+SKELETON:21
+ARMORED_SKELETON:15
+RANGED_SKELETON:14
+(EAGER_ASTAR) Score: 50 turnos: 444 hp: 489735
+(EAGER) Score: 50 turnos: 578 hp: 496875
+(BEHAVIOR_TREE) Score: 50 turnos: 806 hp: 497270
+(DECISION_TREE) Score: 50 turnos: 678 hp: 496825
+
+STAGE 6: 
+Number of enemies by type
+SKELETON:16
+ARMORED_SKELETON:18
+RANGED_SKELETON:16
+(EAGER_ASTAR) Score: 50 turnos: 498 hp: 492965
+(EAGER) Score: 50 turnos: 672 hp: 495735
+(BEHAVIOR_TREE) Score: 50 turnos: 884 hp: 496910
+(DECISION_TREE) Score: 50 turnos: 846 hp: 493415
+
+STAGE 7: 
+Number of enemies by type
+SKELETON:20
+ARMORED_SKELETON:18
+RANGED_SKELETON:12
+(EAGER_ASTAR) Score: 50 turnos: 482 hp: 483600
+(EAGER) Score: 50 turnos: 608 hp: 490580
+(BEHAVIOR_TREE) Score: 50 turnos: 814 hp: 496965
+(DECISION_TREE) Score: 50 turnos: 678 hp: 490340
+
+STAGE 8: 
+Number of enemies by type
+SKELETON:24
+ARMORED_SKELETON:9
+RANGED_SKELETON:17
+(EAGER_ASTAR) Score: 50 turnos: 332 hp: 490950
+(EAGER) Score: 50 turnos: 420 hp: 496945
+(BEHAVIOR_TREE) Score: 50 turnos: 722 hp: 497795
+(DECISION_TREE) Score: 50 turnos: 716 hp: 497390
+
+STAGE 9: 
+Number of enemies by type
+SKELETON:13
+ARMORED_SKELETON:21
+RANGED_SKELETON:16
+(EAGER_ASTAR) Score: 50 turnos: 518 hp: 482255
+(EAGER) Score: 50 turnos: 676 hp: 492520
+(BEHAVIOR_TREE) Score: 50 turnos: 916 hp: 495315
+(DECISION_TREE) Score: 50 turnos: 796 hp: 487975
+
+STAGE 10: 
+Number of enemies by type
+SKELETON:13
+ARMORED_SKELETON:17
+RANGED_SKELETON:20
+(EAGER_ASTAR) Score: 50 turnos: 462 hp: 487510
+(EAGER) Score: 50 turnos: 604 hp: 492575
+(BEHAVIOR_TREE) Score: 50 turnos: 772 hp: 496755
+(DECISION_TREE) Score: 50 turnos: 830 hp: 492520
+
+STAGE 11: 
+Number of enemies by type
+SKELETON:18
+ARMORED_SKELETON:17
+RANGED_SKELETON:15
+(EAGER_ASTAR) Score: 50 turnos: 462 hp: 484980
+(EAGER) Score: 50 turnos: 588 hp: 489755
+(BEHAVIOR_TREE) Score: 50 turnos: 872 hp: 496180
+(DECISION_TREE) Score: 50 turnos: 692 hp: 490655
+
+STAGE 12: 
+Number of enemies by type
+SKELETON:17
+ARMORED_SKELETON:16
+RANGED_SKELETON:17
+(EAGER_ASTAR) Score: 50 turnos: 468 hp: 493445
+(EAGER) Score: 50 turnos: 524 hp: 495090
+(BEHAVIOR_TREE) Score: 50 turnos: 782 hp: 497145
+(DECISION_TREE) Score: 50 turnos: 674 hp: 494880
+
+STAGE 13: 
+Number of enemies by type
+SKELETON:19
+ARMORED_SKELETON:15
+RANGED_SKELETON:16
+(EAGER_ASTAR) Score: 50 turnos: 428 hp: 487145
+(EAGER) Score: 50 turnos: 600 hp: 495125
+(BEHAVIOR_TREE) Score: 50 turnos: 840 hp: 497455
+(DECISION_TREE) Score: 50 turnos: 730 hp: 497715
+
+STAGE 14: 
+Number of enemies by type
+SKELETON:12
+ARMORED_SKELETON:18
+RANGED_SKELETON:20
+(EAGER_ASTAR) Score: 50 turnos: 490 hp: 494300
+(EAGER) Score: 50 turnos: 730 hp: 496060
+(BEHAVIOR_TREE) Score: 50 turnos: 1160 hp: 495825
+(DECISION_TREE) Score: 50 turnos: 980 hp: 497195
+
+STAGE 15: 
+Number of enemies by type
+SKELETON:21
+ARMORED_SKELETON:16
+RANGED_SKELETON:13
+(EAGER_ASTAR) Score: 50 turnos: 454 hp: 489935
+(EAGER) Score: 50 turnos: 558 hp: 492695
+(BEHAVIOR_TREE) Score: 50 turnos: 812 hp: 496455
+(DECISION_TREE) Score: 50 turnos: 668 hp: 493850
+
+STAGE 16: 
+Number of enemies by type
+SKELETON:17
+ARMORED_SKELETON:13
+RANGED_SKELETON:20
+(EAGER_ASTAR) Score: 50 turnos: 422 hp: 495830
+(EAGER) Score: 50 turnos: 494 hp: 494755
+(BEHAVIOR_TREE) Score: 50 turnos: 788 hp: 497520
+(DECISION_TREE) Score: 50 turnos: 658 hp: 497105
+
+STAGE 17: 
+Number of enemies by type
+SKELETON:19
+ARMORED_SKELETON:19
+RANGED_SKELETON:12
+(EAGER_ASTAR) Score: 50 turnos: 520 hp: 495320
+(EAGER) Score: 50 turnos: 562 hp: 496010
+(BEHAVIOR_TREE) Score: 50 turnos: 872 hp: 496680
+(DECISION_TREE) Score: 50 turnos: 800 hp: 496920
+
+STAGE 18: 
+Number of enemies by type
+SKELETON:14
+ARMORED_SKELETON:22
+RANGED_SKELETON:14
+(EAGER_ASTAR) Score: 50 turnos: 550 hp: 487405
+(EAGER) Score: 50 turnos: 742 hp: 493790
+(BEHAVIOR_TREE) Score: 50 turnos: 992 hp: 496595
+(DECISION_TREE) Score: 50 turnos: 812 hp: 492670
+
+STAGE 19: 
+Number of enemies by type
+SKELETON:23
+ARMORED_SKELETON:13
+RANGED_SKELETON:14
+(EAGER_ASTAR) Score: 50 turnos: 398 hp: 490270
+(EAGER) Score: 50 turnos: 536 hp: 493865
+(BEHAVIOR_TREE) Score: 50 turnos: 788 hp: 497765
+(DECISION_TREE) Score: 50 turnos: 702 hp: 497200
+

@@ -16,10 +16,10 @@ public class GameManager : MonoBehaviour
     //Static instance of GameManager which allows it to be accessed by any other script.
     public static GameManager instance = null;
 
-    private CameraController cameraController; // cambiar nombre.
-    protected RoomManager roomManager;
+    public CameraController cameraController { get; set; } // cambiar nombre.
+    protected MapUIController mapUIctrl;
     protected BattleManager battleManager;
-    protected GameState actualGamestate;
+    public GameState actualGamestate;
 
     public GameState ActualGameState { get { return actualGamestate.clone(); } }
 
@@ -32,8 +32,9 @@ public class GameManager : MonoBehaviour
     public Vector3 playerPosition { get { return playerCtrl.transform.position; } }
 
     public bool autoplayEnabled = true;
+
     protected bool mainLoopActive = true;
-    //Esta función ha sido extraida del tutorial unity RogueGame2D
+    //Extracted from unity RogueGame2D tutorial
     //Awake is always called before any Start functions
     void Awake()
     {
@@ -49,7 +50,7 @@ public class GameManager : MonoBehaviour
         //Sets this to not be destroyed when reloading scene
         DontDestroyOnLoad(gameObject);
 
-        roomManager = GetComponent<RoomManager>();
+        mapUIctrl = GetComponent<MapUIController>();
         battleManager = GetComponent<BattleManager>();
         uiController = GameObject.Find("GameUI").GetComponent<UIController>();
         cameraController = GameObject.Find("Main Camera").GetComponent<CameraController>();
@@ -123,34 +124,33 @@ public class GameManager : MonoBehaviour
     protected void chargeLevel(GameState newGS, int level)
     {
         this.level = level;
-        loadGame(newGS); // Optimizar esto
+        loadGame(newGS);
         battleManager.initBattle(playerCtrl, enemiesCtrl);
     }
 
-    private IEnumerable<GameObject> instantiateMultipleEntitiesState(CharacterState[] stateList, bool checkPos = true)
+    private IEnumerable<GameObject> instantiateMultipleCtrlCharacterState(CharacterState[] stateList, bool checkPos = true)
     {
-        return stateList.Select(s => instantiateEntityState(s, checkPos));
+        return stateList.Select(s => instantiateCtrlEnemy(s, checkPos));
     }
 
 
-    private GameObject instantiateEntityState(CharacterState state, bool checkPos = true)
+    private GameObject instantiateCtrlEnemy(CharacterState enemy, bool checkPos = true)
     {
-        if (checkPos && actualGamestate.isAnEmptyTile(state.pos)) // Igual meto aqui una excepcion 
+        if (checkPos && actualGamestate.isAnEmptyTile(enemy.pos)) 
             return null;
-        GameObject go = Instantiate(enemiesPrefab[(int)state.type]);
-        go.GetComponent<MovableEntity>().statsInit(state);
+        GameObject go = Instantiate(enemiesPrefab[(int)enemy.type]);
+        go.GetComponent<MovableEntity>().statsInit(enemy);
         return go;
     }
 
     public void instantiateEnemy(Vector2Int pos, MovableEntity.ENTITIES_TYPE type)
     {
-
-        if (isEntityInPos(pos))
+        if (!actualGamestate.isAnEmptyTile(pos))
             return;
 
-        CharacterState newEnemy = EnemyGenerator.generateEnemy(pos, type, actualGamestate.enemies.Count); // TODO cambiar a algo mas elegante.
+        CharacterState newEnemy = EnemyGenerator.generateEnemy(pos, type, actualGamestate.enemies.Count); 
         actualGamestate.addEnemy(newEnemy);
-        GameObject enemy = instantiateEntityState(newEnemy, false);
+        GameObject enemy = instantiateCtrlEnemy(newEnemy, false);
         enemiesCtrl.Add(enemy.GetComponent<EnemyController>());
     }
 
@@ -218,21 +218,21 @@ public class GameManager : MonoBehaviour
     protected GameState createNewGameState(int numEnemies, int numHabs, GameState gameState = null)
     {
         GameStateGenerator gs = new GameStateGenerator();
-        return gs.generateNewGameState(numEnemies, numHabs, gameState); // Mejorar la gestion del mapa, se genera un mapa y luego la raw information y luego el mapa es extraño.
+        return gs.generateNewGameState(numEnemies, numHabs, gameState); 
     }
 
 
     public void loadGame(GameState newGS)
     {
         newGS = newGS.clone();
-        deleteAllEnemies();
+        deleteAllEnemies(); 
         score = newGS.score;
-        roomManager.loadMap(newGS.rawTiles);
+        mapUIctrl.loadMap(newGS.rawTiles);
 
         playerCtrl.teletransport(newGS.player.pos);
 
         enemiesCtrl = new List<EnemyController>();
-        foreach (GameObject go in instantiateMultipleEntitiesState(newGS.getEnemiesState().ToArray(), false)) // La posición hace que se devuelvan nulos.
+        foreach (GameObject go in instantiateMultipleCtrlCharacterState(newGS.getEnemiesState().ToArray(), false)) 
             enemiesCtrl.Add(go.GetComponent<EnemyController>());
         actualGamestate = newGS;
     }
@@ -241,12 +241,11 @@ public class GameManager : MonoBehaviour
     public void deleteAllEnemies()
     {
         foreach (EnemyController enem in enemiesCtrl.Where(e => e != null))
-            enem.eliminate(); // se que hace conteo de puntos pero me sirve.
+            enem.eliminate();
         enemiesCtrl.Clear();
     }
 
 
-    //Update is called every frame.
     protected virtual void Update()
     {
 
@@ -258,8 +257,8 @@ public class GameManager : MonoBehaviour
             stopBattle();
             if (actualGamestate.player.hp <= 0)
                 loseGame();
-            else if (!autoplayEnabled)
-                floorCompletedMsg();
+//            else if (!autoplayEnabled)
+//                floorCompletedMsg();
             else
                 chargeNextLevel();
 
@@ -267,12 +266,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public Vector2Int getMouseTilePosition()
-    {
-        Vector2 mousePosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-        Vector3 worldPos = cameraController.screenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, 10));
-        return new Vector2Int((int)Mathf.Round(worldPos.x), (int)MathF.Round(worldPos.y));
-    }
 
 
     public MovableEntity getControllerById(int id)
@@ -296,7 +289,7 @@ public class GameManager : MonoBehaviour
     }
 
 
-    public bool executePlayerMove(MovableEntity.Movements mv) // Hacer que se checkee el movimiento del player
+    public bool executePlayerMove(MovableEntity.Movements mv) 
     {
         if (!battleManager.playerTurn || autoplayEnabled)
             return false;
@@ -309,11 +302,9 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    //TODO realizar esto bien. Problema, los enemigos tienen garantizado que sus acciones tienen sentido el player en modo manual no.
-
 
     public void executePlayerAction(Action action, bool dashTurn = false)
-    { // TODO
+    { 
         actualGamestate.applyAction(action, dashTurn);
 
         playerCtrl.executeAction(action);
@@ -330,8 +321,10 @@ public class GameManager : MonoBehaviour
     {
 
         int[] actionsInt = actions.Select(p => p.executor.id).ToArray();
+     
         foreach (Action action in actions)
-            enemiesCtrl[action.executor.id].executeAction(action); // Poner que a los enemigos les baje la barra de vida
+            enemiesCtrl[action.executor.id].executeAction(action); 
+
 
         foreach (Action action in actions)
         {
@@ -353,6 +346,20 @@ public class GameManager : MonoBehaviour
         float maxHP = MovableEntity.models[cs.type].hp;
         float actualHP = cs.hp;
         ent.reduceBarHealth(actualHP / maxHP);
+    }
+
+    public void addTile(Vector2Int tile)
+    {
+        bool isadded = actualGamestate.addTile(tile);
+        if(isadded)
+            mapUIctrl.drawTile(tile);
+    }
+
+    public void removeTile(Vector2Int tile)
+    {
+        bool iseliminated = actualGamestate.removeTile(tile);
+        if(iseliminated)
+            mapUIctrl.deleteTile(tile);
     }
 }
 
@@ -376,11 +383,14 @@ public class ShuffleList<T> {
 
     public static List<T> pickRandomElements(IList<T> lista, int numberOfElements)
     {
-        T[] auxList = lista.ToArray();
+        if (numberOfElements > lista.Count)
+            throw new Exception("There are not enough items on the list to choose from");
 
-        for (int i = lista.Count - 1; i > 1; i--) // Parar el bucle cuando sea necesario
+        T[] auxList = lista.ToArray();
+        int lastIndex = lista.Count - 1 - numberOfElements;
+        for (int i = lista.Count - 1; i > lastIndex; i--)
         {
-            int j = Random.Range(0, i);
+            int j = Random.Range(0, i + 1);
             T aux = auxList[i];
             auxList[i] = auxList[j];
             auxList[j] = aux;

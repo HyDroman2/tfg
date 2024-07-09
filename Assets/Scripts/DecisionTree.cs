@@ -9,7 +9,7 @@ public class Decision : DecisionTreeNode
 {
     private DecisionTreeNode trueNode;
     private DecisionTreeNode falseNode;
-    private System.Func<bool> testValue ;
+    private System.Func<bool> testValue;
 
     public Decision(DecisionTreeNode trueNode, DecisionTreeNode falseNode, System.Func<bool> testValue)
     {

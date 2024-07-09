@@ -15,12 +15,17 @@ public class BattleManagerUtils : MonoBehaviour
     public static class SearchMethods {
         private static Vector2Int ROOT = new Vector2Int(-1, -1);
 
-        // Hace cosas raras
-        public static List<Vector2Int> dfs(HashSet<Vector2Int> explored, Vector2Int pos, GameState gs)
+        public static List<Vector2Int> dfs(Vector2Int pos, GameState gs)
         {
+            return computedfs(new HashSet<Vector2Int>(), pos, gs);
+        }
 
+        private static List<Vector2Int> computedfs(HashSet<Vector2Int> explored, Vector2Int pos, GameState gs) {
+            
             explored.Add(pos);
-            if (gs.entitiesPosition.ContainsKey(pos) && !gs.entitiesPosition[pos].isPlayer) {
+            
+            if (gs.entitiesPosition.ContainsKey(pos) && !gs.entitiesPosition[pos].isPlayer)
+            {
                 return new List<Vector2Int>();
             }
 
@@ -30,7 +35,7 @@ public class BattleManagerUtils : MonoBehaviour
                 if (!gs.isTileInsideMap(newPos) || explored.Contains(newPos))
                     continue;
 
-                List<Vector2Int> retVal = dfs(explored, newPos, gs);
+                List<Vector2Int> retVal = computedfs(explored, newPos, gs);
                 if (retVal != null)
                 {
                     retVal.Add(newPos);
@@ -55,42 +60,38 @@ public class BattleManagerUtils : MonoBehaviour
             return path;
 
         }
-        public static List<Vector2Int> bfs(Vector2Int pos, int range, GameState gs)
+        public static List<Vector2Int> bfs(Vector2Int pos, int maxDeep, GameState gs)
         {
-            int deepness;
-            Vector2Int extractedPos;
-            Queue<(Vector2Int, int)> positions = new Queue<(Vector2Int, int)>(); // Una de ellas es vector3Int
-            Dictionary<Vector2Int, Vector2Int> explored = new Dictionary<Vector2Int, Vector2Int>();
+            const int PLAYER_DEEPNESS = 0;
+            Queue<(Vector2Int, int)> discoveredPos = new Queue<(Vector2Int, int)>();
+            Dictionary<Vector2Int, Vector2Int> explTree = new Dictionary<Vector2Int, Vector2Int>();
 
-            explored.Add(pos, ROOT);
-            positions.Enqueue((pos, 0));
+            explTree.Add(pos, ROOT);
+            discoveredPos.Enqueue((pos, PLAYER_DEEPNESS));
 
-            while (positions.Count != 0)
+            while (discoveredPos.Count != 0)
             {
-                (extractedPos, deepness) = positions.Dequeue();
-                if (deepness > range)
-                    break; // Ha superado la profundidad introducida
-                bool entityInPos = gs.entitiesPosition.ContainsKey(extractedPos);
+                (Vector2Int pos, int deepness) exploring = discoveredPos.Dequeue();
+                if (exploring.deepness > maxDeep)
+                    break; 
 
-                if (entityInPos && !gs.entitiesPosition[extractedPos].isPlayer)
+                if (gs.entitiesPosition.ContainsKey(exploring.pos) && exploring.deepness != PLAYER_DEEPNESS) 
                 {
-                    return bfsPath(explored, extractedPos);
+                    return bfsPath(explTree, exploring.pos);
                 }
 
-                foreach (MovableEntity.Movements item in MovableEntity.Movements.opList)
+                Vector2Int[] newValidPos = MovableEntity.Movements.opList.Select(m => m.Vect + exploring.pos).
+                        Where(p => gs.isTileInsideMap(p) && !explTree.ContainsKey(p)).ToArray();
+
+                foreach (Vector2Int newPos in newValidPos)
                 {
-                    Vector2Int newPos = extractedPos + Vector2Int.FloorToInt(item.Vect);
-                    if (!gs.isTileInsideMap(newPos) || explored.ContainsKey(newPos))
-                        continue;
-
-                    positions.Enqueue((newPos, deepness + 1));
-                    explored.Add(newPos, extractedPos);
+                    discoveredPos.Enqueue((newPos, exploring.deepness + 1));
+                    explTree.Add(newPos, exploring.pos);
                 }
-
             }
             return null;
-
         }
+
 
 
         public static List<Vector2Int> astar(Vector2Int initialPos, Vector2Int endPos, GameState gs)
@@ -122,7 +123,8 @@ public class BattleManagerUtils : MonoBehaviour
 
                 }
 
-                positions = new Queue<(Vector2Int, float)>(positions.OrderBy(tup => tup.Item2)); // Puedo crear clase priority queue que cada vez que añado lo ordena.
+
+                positions = new Queue<(Vector2Int, float)>(positions.OrderBy(tup => tup.Item2));
 
             }
             return new List<Vector2Int>();
@@ -132,8 +134,7 @@ public class BattleManagerUtils : MonoBehaviour
         public static List<Vector2Int> astarPlayer(Vector2Int initialPos, Vector2Int endPos, GameState gs)
         {
             Vector2Int extractedPos;
-            Queue<(Vector2Int, float)> positions = new Queue<(Vector2Int, float)>();
-
+            Queue<(Vector2Int, float)> positions = new Queue<(Vector2Int, float)>(); 
             Dictionary<Vector2Int, Vector2Int> explored = new Dictionary<Vector2Int, Vector2Int>();
 
             explored.Add(initialPos, ROOT);
@@ -236,7 +237,7 @@ public class BattleManagerUtils : MonoBehaviour
     {
 
         public PlayerBrain(GameState gs) : base(gs) { }
-        private const int TILEDISTANCEVIEW = 5;
+        private const int TILEDISTANCEVIEW = 8;
         private Queue<MovableEntity.Movements> memory = null;
 
         public CharacterState getPlayerNearestEnemy()
@@ -250,12 +251,11 @@ public class BattleManagerUtils : MonoBehaviour
             List<Action> actions = new List<Action>();
             Action act = checkNearToThink();
 
-            if(act != null)
-                memory = null;
+            if(act != null) // Se ha encontrado a un enemigo cerca
+                memory = null; 
             else {
-                if (memory == null || memory.Count != 0)
+                if (memory == null || memory.Count == 0)
                     memory = getComplexPathAStar(gs.player.pos, getPlayerNearestEnemy().pos); 
-               
                 act = (memory.Count != 0) ? new Move(gs.player, memory.Dequeue()): new Move(gs.player, MovableEntity.Movements.STAY);
             }
        
@@ -282,34 +282,6 @@ public class BattleManagerUtils : MonoBehaviour
             return act;
         }
 
-        /**
-        public Action getEagerAction()
-        {
-            Action[] legalMoves = gs.legalMoves(gs.player);
-
-            Action bestAction = Array.Find(legalMoves, act => act is Attack);
-            if (bestAction != null) 
-                return bestAction;
-            float minDistance = float.MaxValue;
-            float auxDistance;
-
-            foreach (Action action in legalMoves) {
-                CharacterState newPlayerState = action.executeAction();
-                foreach (CharacterState enemy in gs.enemiesAlive) {
-                        auxDistance = (newPlayerState.pos - enemy.pos).sqrMagnitude;
-                        if (auxDistance < minDistance)
-                        {
-                            bestAction = action;
-                            minDistance = auxDistance;
-                        }
-                    }
-            }
-            
-            return bestAction;
-        }
-
-        */
-
         public Queue<MovableEntity.Movements> getComplexPathAStar(Vector2Int startPos, Vector2Int endPos) {
             List<Vector2Int> camino = SearchMethods.astarPlayer(startPos, endPos, gs); // Astar player
             Queue<MovableEntity.Movements> actionPath = new Queue<MovableEntity.Movements>(camino.Count);
@@ -332,7 +304,7 @@ public class BattleManagerUtils : MonoBehaviour
         { 
 
             List<Action> eagerActions = new List<Action>(gs.enemies.Count);
-
+            GameState auxGS = gs.clone();
             foreach (CharacterState enemy in gs.enemiesAlive.ToArray())
             {
                 Action bestAction = eagerDecisionSingleEnemy(enemy);
@@ -340,6 +312,7 @@ public class BattleManagerUtils : MonoBehaviour
                 eagerActions.Add(bestAction);
             }
 
+            gs = auxGS;
             return eagerActions.ToArray();
         }
         
@@ -367,27 +340,33 @@ public class BattleManagerUtils : MonoBehaviour
     {
         private Dictionary<CharacterState, Queue<MovableEntity.Movements>> memory = new Dictionary<CharacterState, Queue<MovableEntity.Movements>>();
         public EagerastarEnemiesBrain(GameState gs) : base(gs) { }
-
-
+        private const int numberOfTilesConsideredNear = 10;
+        private const int euclideanDistanceConsideredNear = 5;
         public override Action eagerDecisionSingleEnemy(CharacterState enemy) 
         {
-            if (memory.ContainsKey(enemy) && memory.Count <= 10) {
+            bool eagerDecision = false;
+            if (memory.ContainsKey(enemy) && memory[enemy].Count <= numberOfTilesConsideredNear 
+                || gs.player.pos.distance(enemy.pos) <= euclideanDistanceConsideredNear)
+                eagerDecision = true;
+            else {
+                manageEnemyMemory(enemy);
+                if (memory[enemy].Count == 0)
+                    eagerDecision = true;
+            }
+
+            if (eagerDecision)
+            {
+                if (memory.ContainsKey(enemy))
+                    memory.Clear();
                 return base.eagerDecisionSingleEnemy(enemy);
             }
-            manageEnemyMemory(enemy);
+            Action move = new Move(enemy, memory[enemy].Peek());
+            if (gs.entitiesPosition.ContainsKey(move.executeAction().pos))
+                move =  new Move(enemy, MovableEntity.Movements.STAY);
+            else 
+                memory[enemy].Dequeue();
 
-            if (memory[enemy].Count != 0) {
-                Action move = new Move(enemy, memory[enemy].Peek());
-                if (gs.entitiesPosition.ContainsKey(move.executeAction().pos))
-                    return new Move(enemy, MovableEntity.Movements.STAY);
-                else {
-                    memory[enemy].Dequeue();
-                    return move;
-                }
-                   
-            }
-
-            return base.eagerDecisionSingleEnemy(enemy);
+            return move;
      
         }
 
@@ -428,7 +407,7 @@ public class BattleManagerUtils : MonoBehaviour
         public EnemiesBrain(GameState gs) : base(gs) { }
 
     }
-    public class AlphaBetaPruneBrain: EnemiesBrain // Convertir a alphabetaprune y dejar esta sola
+    public class AlphaBetaPruneBrain: EnemiesBrain 
     {
 
         public AlphaBetaPruneBrain(GameState gs) : base(gs) { }
@@ -437,12 +416,12 @@ public class BattleManagerUtils : MonoBehaviour
             return new List<Action>(alphaBetaPrune(3));
         }
 
-        public Action[] alphaBetaPrune(int leftMoves) // Igual hay que tener valores max y min
+        public Action[] alphaBetaPrune(int leftMoves) 
         {
             List<Action> optimalMovements;
             List<Action> nextMovements = new List<Action>(); 
 
-            (_, optimalMovements) = alphaBetaPruneRecTurns(gs, leftMoves, float.MinValue, float.MaxValue); // Igual puede empezar por el player pero digamos que una vez escoge el player.
+            (_, optimalMovements) = alphaBetaPruneRecTurns(gs, leftMoves, float.MinValue, float.MaxValue); 
 
             for (int actIndex = optimalMovements.Count - 1; actIndex >= 0; actIndex--)
             { // Aqui esta el error porque sale dos veces el id 1 en lugar del -1 mirar.
@@ -457,11 +436,11 @@ public class BattleManagerUtils : MonoBehaviour
 
         public (float, List<Action>) alphaBetaPruneRec(GameState gs, int leftmoves,
             float alfa, float beta)
-        { // voy a tener que passar el alfa y el beta
+        {
             Action lastActionApplied = null;
             if (leftmoves == 0 || gs.juegoFinalizado)
             {
-                return (score(gs), new List<Action>(10));
+                return (score(gs), new List<Action>());
             }
             float newBeta, newAlfa;
             List<Action> optimalPath = null, auxOptimalPath;
@@ -507,11 +486,11 @@ public class BattleManagerUtils : MonoBehaviour
 
         public (float, List<Action>) alphaBetaPruneRecTurns(GameState gs, int leftTurn,
         float alfa, float beta)
-        { // voy a tener que passar el alfa y el beta
+        { 
             Action lastActionApplied = null;
             if (leftTurn == 0 || gs.juegoFinalizado)
             {
-                return (score(gs), new List<Action>(10));
+                return (score(gs), new List<Action>());
             }
             float newBeta, newAlfa;
             List<Action> optimalPath = null, auxOptimalPath;
@@ -556,7 +535,6 @@ public class BattleManagerUtils : MonoBehaviour
         }
 
 
-        // Se que va a realizar calculos redundantes, si es necesario optimizo.
         private float score(GameState gs)
         {
             float sumSqrDist = 0;
@@ -569,7 +547,7 @@ public class BattleManagerUtils : MonoBehaviour
                     sumSqrDist += (gs.player.pos - enemy.pos).sqrMagnitude;
             }
 
-            return gs.player.hp * 1000 - sumSqrDist * 0.1f + enemyKillScore;
+            return (PlayerController.getBaseHp() - gs.player.hp) - sumSqrDist * 0.1f - enemyKillScore;
         }
 
     }

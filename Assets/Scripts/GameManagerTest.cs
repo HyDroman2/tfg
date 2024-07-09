@@ -94,10 +94,13 @@ public class GameManagerTest : GameManager
 {
     private BRAIN_TYPES[] test = new BRAIN_TYPES[] {
             BRAIN_TYPES.EAGER_ASTAR_BRAIN,
- 
+            BRAIN_TYPES.EAGER_BRAIN,
+            BRAIN_TYPES.DECISION_TREE_BRAIN,
+            BRAIN_TYPES.BEHAVIOR_TREE_BRAIN
+      
     };
     public GameState[] states;
-    private int numLevels = 1;
+    private int numLevels = 20;
     private int actualBrainIndex = 0;
     private ScoreManager scoreMng;
     private bool endTest;
@@ -107,8 +110,8 @@ public class GameManagerTest : GameManager
     private int indexTestParams = 0;
 
     private void generateTestValues() {
-        IEnumerable<int> roomsTest = Enumerable.Range(8,1);
-        IEnumerable<int> numEnemiesTest = new List<int>(Enumerable.Range(5,3).Select(n => 32 * n));
+        IEnumerable<int> roomsTest = Enumerable.Range(2,1);
+        IEnumerable<int> numEnemiesTest = new List<int>(Enumerable.Range(1,10).Select(n => 5 * n));
         testParams = new List<(int, int)>();
         foreach (int numRoom in roomsTest)
             foreach (int numEnemies in numEnemiesTest)
@@ -180,7 +183,8 @@ public class GameManagerTest : GameManager
         if (gameState == GAMESTATETEST.LAST_LVL_REACHED) {
             keepScore = false;
             level = -1;
-            battleManager.setEnemiesBrainType(test[actualBrainIndex++]);
+            actualBrainIndex++;
+            battleManager.setEnemiesBrainType(test[actualBrainIndex]);
             DebTools.changeTextCurrentAlgorithm(test[actualBrainIndex]);
         }
 

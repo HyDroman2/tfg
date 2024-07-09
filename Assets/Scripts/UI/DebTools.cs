@@ -13,7 +13,7 @@ public class DebTools: MonoBehaviour
     private bool overGUI = false;
     private List<Sprite> spriteOrder;
     private GameManager gm;
-    private RoomManager rm;
+    private MapUIController rm;
     public Sprite tile1Img;
     public Sprite tile2Img;
     private Sprite[] tileOrder;
@@ -35,7 +35,6 @@ public class DebTools: MonoBehaviour
     private Color endBlinkColor;
 
     public Material borderMaterial;
-    // Start is called before the first frame update
 
     private void Start()
     {
@@ -45,7 +44,7 @@ public class DebTools: MonoBehaviour
             spriteOrder.Add(enemyPrefab.GetComponent<SpriteRenderer>().sprite);
        
         tileOrder = new Sprite[] { tile1Img, tile2Img };
-        GameObject.Find("EnemyButton").GetComponent<Image>().color = Color.white; // TODO chequear
+        GameObject.Find("EnemyButton").GetComponent<Image>().color = Color.white; 
 
         EnemyContainer = GameObject.Find("EnemyContainer").GetComponent<Image>();
         BrushContainer = GameObject.Find("BrushContainer").GetComponent<Image>();
@@ -54,14 +53,14 @@ public class DebTools: MonoBehaviour
         PlayContainer = GameObject.Find("BtnPlay").GetComponent<Image>();
         currentAlgorithmDisplayed = GameObject.Find("CurrentAlgorithmText").GetComponent<TMP_Text>();
         endBlinkColor = greenColor;
-        rm = RoomManager.get();
+        rm = MapUIController.get();
 
     }
     public enum GUIActions { 
         NONE, Play, BRUSH, ENEMIES, DELETE, MOVE
     }
 
-    public void stopBattleManager() { // Hacer que se centre al centro del mapa
+    public void stopBattleManager() { 
         gm.stopBattle();
         gm.setCameraMode(CameraController.CAMERA_MODES.MANUAL);
         Debug.Log("Stop pressed");
@@ -202,12 +201,12 @@ public class DebTools: MonoBehaviour
         
 
         if (!overGUI) { 
-            devToolsManagement();
+            debToolsManagement();
         }
     }
 
-    private void devToolsManagement() {
-        Vector2Int clickedTile = gm.getMouseTilePosition();
+    private void debToolsManagement() {
+        Vector2Int clickedTile = getMouseTilePosition();
         int entityID = gm.getEntityIdInPos(clickedTile);
         bool isEntityInPos = entityID != -2; 
         
@@ -253,11 +252,19 @@ public class DebTools: MonoBehaviour
 
     }
 
+    public Vector2Int getMouseTilePosition()
+    {
+        Vector2 mousePosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        Vector3 worldPos = gm.cameraController.screenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, 10));
+        return new Vector2Int((int)Mathf.Round(worldPos.x), (int)MathF.Round(worldPos.y));
+    }
+
+
     private void manageBrushAction(Vector2Int clickedTile) {
         if (currentSpriteTile == 0)
-            rm.addTile(clickedTile);
+            gm.addTile(clickedTile);
         else
-            rm.deleteTile(clickedTile);
+            gm.removeTile(clickedTile);
     }
 
 

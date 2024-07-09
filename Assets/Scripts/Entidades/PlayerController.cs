@@ -5,7 +5,7 @@ public class PlayerController : MovableEntity
 
     public static PlayerController instance;
     public Movements face = Movements.DOWN;
-    private static int BASE_HP = 100000;
+    private static int BASE_HP = 500000;
     private static int BASE_ATTACK = 10;
     private static int BASE_DEFENSE = 0;
     private static int BASE_RANGE = 1;
@@ -13,7 +13,7 @@ public class PlayerController : MovableEntity
     public static CharacterState defaultStatePlayer { get { return data.clone(); } }
 
 
-    public int getBaseHp() {
+    public static int getBaseHp() {
         return BASE_HP;
     }
     public static string getInfoBaseStats()
@@ -39,7 +39,7 @@ public class PlayerController : MovableEntity
 
 
 
-    public override void attack(Vector2 pos) // TODO: Overridear esto yo creo que es la clave.
+    public override void attack(Vector2 pos) 
     {
         if (acted)
             return;
@@ -92,7 +92,7 @@ public class PlayerController : MovableEntity
         }
         else if (Input.GetKeyDown(KeyCode.A))
         {
-            Vector2Int pos = new Vector2Int((int)transform.position.x, (int)transform.position.y) + face.Vect; // TODO
+            Vector2Int pos = new Vector2Int((int)transform.position.x, (int)transform.position.y) + face.Vect;
             GameManager.instance.executePlayerAttack(pos);
         }
 

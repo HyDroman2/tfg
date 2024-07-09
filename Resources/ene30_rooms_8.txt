@@ -1,0 +1,158 @@
+Entities Stats: 
+
+Player: HP:500000 ATK: 10, DEF: 0 Range: 1
+Skeleton: HP:20 ATK: 10, DEF: 0 Range: 1
+ArmoredSkeleton: HP:50 ATK: 10, DEF: 5 Range: 1
+RangedSkeleton: HP:10 ATK: 15, DEF: 0 Range: 2
+End entities Stats: 
+
+Dungeon config params: 
+No Stages: 20
+No Enemies: 30
+No Rooms: 8
+End Dungeon config params 
+
+Accumulative end results:
+(EAGER_ASTAR) Score: 600 turnos: 5872 hp: 414940
+
+Partial results:
+STAGE 0: 
+Number of enemies by type
+SKELETON:13
+ARMORED_SKELETON:11
+RANGED_SKELETON:6
+(EAGER_ASTAR) Score: 30 turnos: 298 hp: 494345
+
+STAGE 1: 
+Number of enemies by type
+SKELETON:11
+ARMORED_SKELETON:11
+RANGED_SKELETON:8
+(EAGER_ASTAR) Score: 30 turnos: 300 hp: 495350
+
+STAGE 2: 
+Number of enemies by type
+SKELETON:7
+ARMORED_SKELETON:11
+RANGED_SKELETON:12
+(EAGER_ASTAR) Score: 30 turnos: 288 hp: 491615
+
+STAGE 3: 
+Number of enemies by type
+SKELETON:11
+ARMORED_SKELETON:7
+RANGED_SKELETON:12
+(EAGER_ASTAR) Score: 30 turnos: 234 hp: 496260
+
+STAGE 4: 
+Number of enemies by type
+SKELETON:6
+ARMORED_SKELETON:11
+RANGED_SKELETON:13
+(EAGER_ASTAR) Score: 30 turnos: 292 hp: 494445
+
+STAGE 5: 
+Number of enemies by type
+SKELETON:10
+ARMORED_SKELETON:10
+RANGED_SKELETON:10
+(EAGER_ASTAR) Score: 30 turnos: 274 hp: 493445
+
+STAGE 6: 
+Number of enemies by type
+SKELETON:8
+ARMORED_SKELETON:7
+RANGED_SKELETON:15
+(EAGER_ASTAR) Score: 30 turnos: 236 hp: 495660
+
+STAGE 7: 
+Number of enemies by type
+SKELETON:11
+ARMORED_SKELETON:10
+RANGED_SKELETON:9
+(EAGER_ASTAR) Score: 30 turnos: 312 hp: 498555
+
+STAGE 8: 
+Number of enemies by type
+SKELETON:10
+ARMORED_SKELETON:12
+RANGED_SKELETON:8
+(EAGER_ASTAR) Score: 30 turnos: 314 hp: 494935
+
+STAGE 9: 
+Number of enemies by type
+SKELETON:10
+ARMORED_SKELETON:13
+RANGED_SKELETON:7
+(EAGER_ASTAR) Score: 30 turnos: 342 hp: 495585
+
+STAGE 10: 
+Number of enemies by type
+SKELETON:11
+ARMORED_SKELETON:10
+RANGED_SKELETON:9
+(EAGER_ASTAR) Score: 30 turnos: 278 hp: 496085
+
+STAGE 11: 
+Number of enemies by type
+SKELETON:11
+ARMORED_SKELETON:9
+RANGED_SKELETON:10
+(EAGER_ASTAR) Score: 30 turnos: 288 hp: 496905
+
+STAGE 12: 
+Number of enemies by type
+SKELETON:12
+ARMORED_SKELETON:5
+RANGED_SKELETON:13
+(EAGER_ASTAR) Score: 30 turnos: 210 hp: 498040
+
+STAGE 13: 
+Number of enemies by type
+SKELETON:6
+ARMORED_SKELETON:17
+RANGED_SKELETON:7
+(EAGER_ASTAR) Score: 30 turnos: 384 hp: 493215
+
+STAGE 14: 
+Number of enemies by type
+SKELETON:9
+ARMORED_SKELETON:10
+RANGED_SKELETON:11
+(EAGER_ASTAR) Score: 30 turnos: 282 hp: 495305
+
+STAGE 15: 
+Number of enemies by type
+SKELETON:10
+ARMORED_SKELETON:10
+RANGED_SKELETON:10
+(EAGER_ASTAR) Score: 30 turnos: 324 hp: 497510
+
+STAGE 16: 
+Number of enemies by type
+SKELETON:10
+ARMORED_SKELETON:5
+RANGED_SKELETON:15
+(EAGER_ASTAR) Score: 30 turnos: 214 hp: 497715
+
+STAGE 17: 
+Number of enemies by type
+SKELETON:7
+ARMORED_SKELETON:11
+RANGED_SKELETON:12
+(EAGER_ASTAR) Score: 30 turnos: 302 hp: 497170
+
+STAGE 18: 
+Number of enemies by type
+SKELETON:9
+ARMORED_SKELETON:11
+RANGED_SKELETON:10
+(EAGER_ASTAR) Score: 30 turnos: 302 hp: 494750
+
+STAGE 19: 
+Number of enemies by type
+SKELETON:8
+ARMORED_SKELETON:14
+RANGED_SKELETON:8
+(EAGER_ASTAR) Score: 30 turnos: 398 hp: 498050
+

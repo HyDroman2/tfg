@@ -10,7 +10,7 @@ public class BattleManager : MonoBehaviour
     private bool playerActed;
     private Action playerManualAction;
 
-    private List<EnemyController> enemiesCtrl; // tiene en el index 0 al jugador y de ahi en arriba al resto.
+    private List<EnemyController> enemiesCtrl; // index 0: Player  1+: Enemies
     private IEnumerable<EnemyController> enemiesCtrlAlive { get { return enemiesCtrl.Where(chr => chr != null); } }
     PlayerController playerCtrl;
     private static BattleManager battleManager;
@@ -29,21 +29,30 @@ public class BattleManager : MonoBehaviour
         if (battleManager != null)
             return battleManager;
         else
-            throw new System.InvalidOperationException("Se ha intentado acceder al Battle sin haberse instanciado"); //Cambiar el tipo de excepcion
+            throw new System.InvalidOperationException("An attempt was made to access the BattleManager without being instantiated."); 
     }
 
 
-    public void initBattle(PlayerController playerCtrl, List<EnemyController> enemiesCtrl, BRAIN_TYPES enemiesBrain = BRAIN_TYPES.EAGER_BRAIN)
+    public void initBattle(PlayerController playerCtrl, List<EnemyController> enemiesCtrl)
     {
         battleManager = this;
         this.enemiesCtrl = enemiesCtrl;
         this.playerCtrl = playerCtrl;
-        this.enemiesBrain = enemiesBrain;
         coldStartBattleManager();
+    }
+
+
+
+    public void initBattle(PlayerController playerCtrl, List<EnemyController> enemiesCtrl, BRAIN_TYPES enemiesBrain = BRAIN_TYPES.EAGER_BRAIN)
+    {
+        this.enemiesBrain = enemiesBrain;
+        initBattle(playerCtrl, enemiesCtrl);
     }
 
     void Update()
     {
+        if (GameManager.instance.actualGamestate.juegoFinalizado)
+            return;
         if (playerTurn)
             managePlayerTurn();
         else if (isDashTurn)
@@ -106,7 +115,6 @@ public class BattleManager : MonoBehaviour
         Debug.Log(numTurn);
     }
 
-    // Creo que es cuando cambia de mapa
     private void manageEnemyTurn() {
 
 
@@ -143,7 +151,7 @@ public class BattleManager : MonoBehaviour
                 actualEnemiesBrain = new BehaviorTreeBrain(state);
                 break;
             default:
-                throw new System.Exception("Se ha introducido");
+                throw new System.Exception("An untreated type has been introduced");
         }
         enemiesBrain = brainType;
           
@@ -166,6 +174,7 @@ public class BattleManager : MonoBehaviour
         createBrain(enemiesBrain, GameManager.instance.ActualGameState);
         playerBrain = new PlayerBrain(GameManager.instance.ActualGameState);
         playerTurn = true;
+        dashActivated = false;
         canEnemiesAct = false;
         playerActed = false;
         enabled = true;

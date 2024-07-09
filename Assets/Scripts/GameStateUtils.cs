@@ -26,7 +26,7 @@ public class CharacterState {
         this.attackRange = attackRange;
     }
 
-    public CharacterState clone() { // Hacer interfaz cloneable
+    public CharacterState clone() { 
         return new CharacterState(hp, attackDamage, defense, pos, id, type, attackRange);
     }
 
@@ -65,7 +65,7 @@ public class Attack : Action {
     public override CharacterState executeAction()
     {
         if (victim.pos.distance(executor.pos) > executor.attackRange)
-            throw new System.Exception("Se ha realizado un ataque fuera de rango");
+            throw new System.Exception("An out-of-range attack has been performed");
 
         CharacterState newGameStateVictim = victim.clone();
         newGameStateVictim.hp -= (executor.attackDamage - newGameStateVictim.defense);
@@ -99,18 +99,19 @@ public class GameState {
     public CharacterState ActualExecutor  { get { return getActualExecutor(); } }
     public int idActualExecutor = -1;
     public int numEnemigosMuertos = 0;
-    public bool juegoFinalizado = false;
+    public bool juegoFinalizado { get { return player.hp <= 0 || (numEnemigosMuertos >= enemies.Count);   } }
     public int score = 0;
    
 
     // El objetivo va a ser que sea rapido
 
-    public GameState(CharacterState player, List<CharacterState> enemies, int idActualExecutor, Map map, int score) { // Ponerlo aqui
+    public GameState(CharacterState player, List<CharacterState> enemies, int idActualExecutor, Map map, int score) { 
         this.player = player;
         this.enemies = enemies;
         this.map = map;
         this.score = score;
         this.idActualExecutor = idActualExecutor;
+        numEnemigosMuertos = enemies.Where(e => e == null).Count();
         entitiesPosition = new Dictionary<Vector2Int, CharacterState>(enemies.Count + 1);
         entitiesPosition.Add(player.pos, player);
 
@@ -200,7 +201,9 @@ public class GameState {
 
     private void ManageMove(Move mv) {
 
-        CharacterState newCS = mv.executeAction(); // bug se mueve dos veces el mismo esqueleto
+        CharacterState newCS = mv.executeAction(); 
+        if (!isTileInsideMap(newCS.pos))
+            throw new Exception("El enemigo se ha salido del mapa");
         entitiesPosition.Remove(mv.executor.pos);
         entitiesPosition.Add(newCS.pos, newCS);
 
@@ -230,8 +233,6 @@ public class GameState {
         if (haMuerto)
             if (!newCS.isPlayer)
                 eliminateEnemy(newCS);
-            else
-                juegoFinalizado = true;
 
     }
 
@@ -240,9 +241,7 @@ public class GameState {
         enemies[entity.id] = null;
         numEnemigosMuertos++;
         score++;
-        if (numEnemigosMuertos >= enemies.Count)
-            juegoFinalizado = true;
-        else if (idActualExecutor == entity.id)
+        if (idActualExecutor == entity.id)
             idActualExecutor = getNextExecutor();
     }
 
@@ -279,9 +278,9 @@ public class GameState {
         else
             return enemies[idActualExecutor];
     }
-    public GameState generateNewState(Action action) { // Cambiar
+    public GameState generateNewState(Action action) {
         if (juegoFinalizado)
-            throw new System.Exception("El juego ya ha finalizado asi que no tiene sentido haber llegado aqui");
+            throw new System.Exception("An attempt has been made to clone a finished game.");
         GameState updatedGS = clone();
         updatedGS.applyAction(action);
         return updatedGS;
@@ -298,6 +297,15 @@ public class GameState {
         return map.tiles.Contains(pos);
     }
 
+    public bool addTile(Vector2Int tile) {
+        return map.addTile(tile);
+    }
+
+
+    public bool removeTile(Vector2Int tile) {
+        return map.removeTile(tile);
+    
+    }
     public void changePositionEntity(int id, Vector2Int newPos) {
 
         if (entitiesPosition.ContainsKey(newPos))

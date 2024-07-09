@@ -15,7 +15,7 @@ public abstract class ControlTask: Tarea {
 
 }
 
-public class Selector : ControlTask // Cambiar la clase de Tarea a ControlTask
+public class Selector : ControlTask 
 {
     public Selector(Tarea[] hijos) : base(hijos) { }
 
@@ -30,7 +30,7 @@ public class Selector : ControlTask // Cambiar la clase de Tarea a ControlTask
 
 public class NonDeterministicSelector : ControlTask {
     public NonDeterministicSelector(Tarea[] hijos) : base(hijos) { }
-    public override bool run() // TODO change
+    public override bool run() 
     {
         foreach (Tarea h in ShuffleList<Tarea>.shuffle(hijos))
             if (h.run())
@@ -82,7 +82,7 @@ public class ChasePlayerTask : GameStatTask
 
     public override bool run()
     {
-        if (gs.ActualExecutor.pos.distance(gs.player.pos) >= 2) { // Mirar bien esto TODO
+        if (gs.ActualExecutor.pos.distance(gs.player.pos) >= 2) {
             Action act = bt.getNearestMoveTo(gs.ActualExecutor, gs.player);
             if (act != null)
             {
@@ -162,10 +162,10 @@ public class LoseTimeTask : GameStatTask
     { 
         float maxDistance = float.MinValue;
         CharacterState actualExecutor = gs.ActualExecutor;
-        Action act; // Poner bien
+        Action act;
         act = new Move(actualExecutor, MovableEntity.Movements.STAY);
 
-        foreach (Action move in gs.legalMoves().Where(m => m is Move)) // Actual executor
+        foreach (Action move in gs.legalMoves().Where(m => m is Move)) 
         {
             Vector2Int newPos = actualExecutor.pos + ((Move)move).direction.Vect;
             if (!gs.map.indexVectorRoom.ContainsKey(newPos))
@@ -249,15 +249,14 @@ public class BehaviorTreeBrain : EnemiesBrain{
         Tarea SelectorGoToWiderPosition = new NonDeterministicSelector(new Tarea[] { goToNearestRoom, attack });
         Tarea sequenceAvoidCorridor = new Sequence(new Tarea[] { inNarrowPosition, SelectorGoToWiderPosition });
 
-        Tarea attackPlayerSelector = new Selector(new Tarea[] { chasePlayer, attack }); // Poner tarea chase Player
+        Tarea attackPlayerSelector = new Selector(new Tarea[] { chasePlayer, attack }); 
 
         Tarea sequenceMultipleEnemiesRoom = new Sequence(new Tarea[] { isPlayerInSameRoom, areMoreEnemiesInSameRoom, attackPlayerSelector });
 
 
-        Tarea sequenceFewEnemiesRoom = new NonDeterministicSelector(new Tarea[] { loseTime, attack});
 
 
-        root = new Selector(new Tarea[] { sequenceAvoidCorridor, sequenceMultipleEnemiesRoom, sequenceFewEnemiesRoom });
+        root = new Selector(new Tarea[] { sequenceAvoidCorridor, sequenceMultipleEnemiesRoom, loseTime });
 
 
     }
@@ -273,7 +272,7 @@ public class BehaviorTreeBrain : EnemiesBrain{
     }
 
 
-    public override List<Action> makeDecision() // TODO resolver nulos, lo hare por la noche
+    public override List<Action> makeDecision() 
     {
         accionesGeneradas.Clear();
         foreach (CharacterState cs in new List<CharacterState>(gs.enemiesAlive))
@@ -286,7 +285,7 @@ public class BehaviorTreeBrain : EnemiesBrain{
 
             gs.applyAction(lastActionAdded);
             lastActionAdded = null;
-            // Hay que updatear el gamestate
+    
         }
     
         return new List<Action>(accionesGeneradas);

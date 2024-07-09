@@ -11,7 +11,7 @@ public class UIController : MonoBehaviour
 
     void Start()
     {
-        scoreUI = transform.GetChild(0).GetChild(0).GetComponent<TMP_Text>(); // Igual poner un diccionario
+        scoreUI = transform.GetChild(0).GetChild(0).GetComponent<TMP_Text>();
         deadPanel = transform.GetChild(1).gameObject;
         deadPanel.SetActive(false);
         floorCompletedPanel = transform.GetChild(2).gameObject;
@@ -26,7 +26,6 @@ public class UIController : MonoBehaviour
         scoreUI.text = "Score: " + score;
     }
 
-    // TODO hacer metodo que habilite o instancie el prefab del mensaje de muerte.
     public static void deadScreen(int floor, int score) {
         TMP_Text deadMSG = deadPanel.transform.GetChild(0).GetComponent<TMP_Text>();
         deadMSG.text = string.Format("Has muerto\n Piso:{0} Muertes:{1}",floor, score);
